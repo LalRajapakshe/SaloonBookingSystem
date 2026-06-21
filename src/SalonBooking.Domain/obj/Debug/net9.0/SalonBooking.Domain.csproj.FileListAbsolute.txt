@@ -1,0 +1,14 @@
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\bin\Debug\net9.0\SalonBooking.Domain.deps.json
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\bin\Debug\net9.0\SalonBooking.Domain.runtimeconfig.json
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\bin\Debug\net9.0\SalonBooking.Domain.dll
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\bin\Debug\net9.0\SalonBooking.Domain.pdb
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.csproj.AssemblyReference.cache
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.AssemblyInfoInputs.cache
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.AssemblyInfo.cs
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.csproj.CoreCompileInputs.cache
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.dll
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\refint\SalonBooking.Domain.dll
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.pdb
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.genruntimeconfig.cache
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\ref\SalonBooking.Domain.dll

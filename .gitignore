@@ -1,0 +1,43 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build
+bin/
+obj/
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# NuGet
+packages/
+
+# Logs
+*.log
+
+# OS Files
+Thumbs.db
+Desktop.ini
+
+# Environment
+.env
+.env.*
+
+# Node.js (future Next.js frontend)
+node_modules/
+.next/
+out/
+
+# Coverage
+coverage/
+
+# Publish
+publish/
+
+# Temporary
+tmp/
+temp/

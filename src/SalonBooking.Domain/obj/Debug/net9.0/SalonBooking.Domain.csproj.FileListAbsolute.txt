@@ -12,3 +12,4 @@ D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\refint\SalonB
 D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.pdb
 D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.genruntimeconfig.cache
 D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\ref\SalonBooking.Domain.dll
+D:\Projects\SaloonBooking\src\SalonBooking.Domain\obj\Debug\net9.0\SalonBooking.Domain.sourcelink.json

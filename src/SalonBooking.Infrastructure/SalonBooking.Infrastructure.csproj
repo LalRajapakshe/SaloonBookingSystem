@@ -19,4 +19,10 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SalonBooking.Application\SalonBooking.Application.csproj" />
+    <ProjectReference Include="..\SalonBooking.Domain\SalonBooking.Domain.csproj" />
+    <ProjectReference Include="..\SalonBooking.Persistence\SalonBooking.Persistence.csproj" />
+  </ItemGroup>
+
 </Project>

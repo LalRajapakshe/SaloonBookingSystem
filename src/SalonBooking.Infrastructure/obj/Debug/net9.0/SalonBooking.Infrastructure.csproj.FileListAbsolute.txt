@@ -12,3 +12,11 @@ D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\obj\Debug\net9.0\refin
 D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\obj\Debug\net9.0\SalonBooking.Infrastructure.pdb
 D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\obj\Debug\net9.0\SalonBooking.Infrastructure.genruntimeconfig.cache
 D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\obj\Debug\net9.0\ref\SalonBooking.Infrastructure.dll
+D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\obj\Debug\net9.0\SalonBooking.Infrastructure.sourcelink.json
+D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\bin\Debug\net9.0\SalonBooking.Application.dll
+D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\bin\Debug\net9.0\SalonBooking.Domain.dll
+D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\bin\Debug\net9.0\SalonBooking.Application.pdb
+D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\bin\Debug\net9.0\SalonBooking.Domain.pdb
+D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\obj\Debug\net9.0\SalonBoo.8F1157FE.Up2Date
+D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\bin\Debug\net9.0\SalonBooking.Persistence.dll
+D:\Projects\SaloonBooking\src\SalonBooking.Infrastructure\bin\Debug\net9.0\SalonBooking.Persistence.pdb

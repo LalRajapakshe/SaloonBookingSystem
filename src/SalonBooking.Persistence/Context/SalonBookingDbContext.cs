@@ -27,4 +27,6 @@ public class SalonBookingDbContext : DbContext
     public DbSet<UserRole> UserRoles => Set<UserRole>();
 
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+
+    public DbSet<Customer> Customers { get; set; }
 }

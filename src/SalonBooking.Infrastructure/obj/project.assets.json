@@ -1598,6 +1598,50 @@
             "rid": "win"
           }
         }
+      },
+      "SalonBooking.Application/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "9.0.8",
+          "Microsoft.EntityFrameworkCore.SqlServer": "9.0.8",
+          "SalonBooking.Domain": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/SalonBooking.Application.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/SalonBooking.Application.dll": {}
+        }
+      },
+      "SalonBooking.Domain/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "9.0.8",
+          "Microsoft.EntityFrameworkCore.SqlServer": "9.0.8"
+        },
+        "compile": {
+          "bin/placeholder/SalonBooking.Domain.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/SalonBooking.Domain.dll": {}
+        }
+      },
+      "SalonBooking.Persistence/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "9.0.8",
+          "Microsoft.EntityFrameworkCore.SqlServer": "9.0.8",
+          "SalonBooking.Domain": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/SalonBooking.Persistence.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/SalonBooking.Persistence.dll": {}
+        }
       }
     }
   },
@@ -4701,6 +4745,21 @@
         "system.windows.extensions.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "SalonBooking.Application/1.0.0": {
+      "type": "project",
+      "path": "../SalonBooking.Application/SalonBooking.Application.csproj",
+      "msbuildProject": "../SalonBooking.Application/SalonBooking.Application.csproj"
+    },
+    "SalonBooking.Domain/1.0.0": {
+      "type": "project",
+      "path": "../SalonBooking.Domain/SalonBooking.Domain.csproj",
+      "msbuildProject": "../SalonBooking.Domain/SalonBooking.Domain.csproj"
+    },
+    "SalonBooking.Persistence/1.0.0": {
+      "type": "project",
+      "path": "../SalonBooking.Persistence/SalonBooking.Persistence.csproj",
+      "msbuildProject": "../SalonBooking.Persistence/SalonBooking.Persistence.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -4708,7 +4767,10 @@
       "Microsoft.EntityFrameworkCore >= 9.0.8",
       "Microsoft.EntityFrameworkCore.Design >= 9.0.8",
       "Microsoft.EntityFrameworkCore.SqlServer >= 9.0.8",
-      "Microsoft.EntityFrameworkCore.Tools >= 9.0.8"
+      "Microsoft.EntityFrameworkCore.Tools >= 9.0.8",
+      "SalonBooking.Application >= 1.0.0",
+      "SalonBooking.Domain >= 1.0.0",
+      "SalonBooking.Persistence >= 1.0.0"
     ]
   },
   "packageFolders": {
@@ -4742,7 +4804,17 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "D:\\Projects\\SaloonBooking\\src\\SalonBooking.Application\\SalonBooking.Application.csproj": {
+              "projectPath": "D:\\Projects\\SaloonBooking\\src\\SalonBooking.Application\\SalonBooking.Application.csproj"
+            },
+            "D:\\Projects\\SaloonBooking\\src\\SalonBooking.Domain\\SalonBooking.Domain.csproj": {
+              "projectPath": "D:\\Projects\\SaloonBooking\\src\\SalonBooking.Domain\\SalonBooking.Domain.csproj"
+            },
+            "D:\\Projects\\SaloonBooking\\src\\SalonBooking.Persistence\\SalonBooking.Persistence.csproj": {
+              "projectPath": "D:\\Projects\\SaloonBooking\\src\\SalonBooking.Persistence\\SalonBooking.Persistence.csproj"
+            }
+          }
         }
       },
       "warningProperties": {

@@ -11,6 +11,10 @@ using SalonBooking.Infrastructure.Authentication;
 using SalonBooking.API.Controllers;
 using SalonBooking.Infrastructure.Services;
 
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using SalonBooking.Application.Features.Customer.Validators;
+
 using Microsoft.OpenApi.Models;
 
 
@@ -34,6 +38,7 @@ builder.Services.AddScoped<IJwtTokenService,    JwtTokenService>();
 
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();    
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<ItenantService, TenantService>();
 
 builder.Services.AddAuthentication(
         JwtBearerDefaults.AuthenticationScheme)
@@ -73,6 +78,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateCustomerRequestValidator>();
 
 builder.Services.AddSwaggerGen(options =>
 {

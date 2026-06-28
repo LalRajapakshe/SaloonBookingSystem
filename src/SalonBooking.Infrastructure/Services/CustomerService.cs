@@ -1,5 +1,6 @@
 using SalonBooking.Application.Features.Customer.DTOs;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -16,10 +17,18 @@ public class CustomerService : ICustomerService
     }
     public async Task<CustomerResponse> CreateAsync(CreateCustomerRequest request)
     {
+        var lastCustomer = await _context.Customers
+           .OrderByDescending(c => c.CustomerId).FirstOrDefaultAsync();
+                long  nextNumber = lastCustomer == null
+                    ? 1
+                    : lastCustomer.CustomerId + 1;
         var customer = new Customer
             {
                 TenantId = 1, // Temporary until multi-tenant login is implemented
-                CustomerCode = $"CUS{DateTime.Now.Ticks}",
+
+
+                CustomerCode = $"CUS{nextNumber:D6}", 
+               // CustomerCode = $"CUS{DateTime.Now.Ticks}",
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 MobileNo = request.MobileNo,
@@ -43,6 +52,66 @@ public class CustomerService : ICustomerService
             Email = customer.Email
         };
     }
+
+  public async Task<PagedResult<CustomerResponse>> GetCustomersAsync(CustomerQueryRequest request)
+  {
+    var query = _context.Customers.Where(c => c.IsActive).AsQueryable();
+    if (!string.IsNullOrWhiteSpace(request.Search))
+    {
+    query = query.Where(c =>
+        c.FirstName.Contains(request.Search) ||
+        c.LastName.Contains(request.Search) ||
+        c.MobileNo.Contains(request.Search) ||
+        c.Email.Contains(request.Search) ||
+        c.CustomerCode.Contains(request.Search));
+    }
+    if (!string.IsNullOrWhiteSpace(request.Gender))
+    {
+    query = query.Where(c => c.Gender == request.Gender);
+    }
+
+    query = request.SortBy.ToLower() switch
+    {
+    "firstname" => request.SortOrder == "desc"
+        ? query.OrderByDescending(c => c.FirstName)
+        : query.OrderBy(c => c.FirstName),
+
+    "lastname" => request.SortOrder == "desc"
+        ? query.OrderByDescending(c => c.LastName)
+        : query.OrderBy(c => c.LastName),
+
+    "customercode" => request.SortOrder == "desc"
+        ? query.OrderByDescending(c => c.CustomerCode)
+        : query.OrderBy(c => c.CustomerCode),
+
+    _ => query.OrderByDescending(c => c.CustomerId)
+   };
+
+   var totalRecords = await query.CountAsync();
+
+   var customers = await query
+    .Skip((request.Page - 1) * request.PageSize)
+    .Take(request.PageSize)
+    .ToListAsync();
+
+    var items = customers.Select(c => new CustomerResponse
+    {
+    CustomerId = c.CustomerId,
+    CustomerCode = c.CustomerCode,
+    FullName = c.FirstName + " " + c.LastName,
+    MobileNo = c.MobileNo,
+    Email = c.Email
+    }).ToList();
+
+    return new PagedResult<CustomerResponse>
+    {
+    Page = request.Page,
+    PageSize = request.PageSize,
+    TotalRecords = totalRecords,
+    TotalPages = (int)Math.Ceiling((double)totalRecords / request.PageSize),
+    Items = items
+    };
+  }
 
   public async Task<List<CustomerResponse>> GetAllAsync()
     {

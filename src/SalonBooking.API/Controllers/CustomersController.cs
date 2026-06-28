@@ -29,13 +29,13 @@ public class CustomersController
         return Ok(customer);
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
-    {
-        var customers = await _customerService.GetAllAsync();
+   // [HttpGet]
+  //  public async Task<IActionResult> GetAll()
+  //  {
+ //       var customers = await _customerService.GetAllAsync();
 
-        return Ok(customers);
-    }
+ //       return Ok(customers);
+ //   }
 
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id)
@@ -48,6 +48,15 @@ public class CustomersController
         return Ok(customer);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetCustomers(
+        [FromQuery] CustomerQueryRequest request)
+    {
+        var result = await _customerService.GetCustomersAsync(request);
+
+        return Ok(result);
+    }
+
     [HttpPut("{id:long}")]
     public async Task<IActionResult> Update(
         long id,
@@ -55,6 +64,9 @@ public class CustomersController
     {
         var customer =
             await _customerService.UpdateAsync(id, request);
+
+        if (customer == null)
+            return NotFound();    
 
         return Ok(customer);
     }

@@ -1,4 +1,5 @@
 using SalonBooking.Domain.Common;
+
 namespace SalonBooking.Domain.Entities;
 
 public class Branch : TenantEntity
@@ -15,9 +16,17 @@ public class Branch : TenantEntity
 
     public string? City { get; set; }
 
-    public string? ContactNo { get; set; }
+    public string? PhoneNo { get; set; }
 
     public string? Email { get; set; }
+
+    public string? ManagerName { get; set; }
+
+    public bool IsHeadOffice { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    public bool IsDeleted { get; set; } = false;
 
     public Tenant Tenant { get; set; } = null!;
 }

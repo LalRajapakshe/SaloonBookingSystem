@@ -1,6 +1,10 @@
 using SalonBooking.Application.Common;
 using SalonBooking.Application.Features.Tenant.DTOs;
 
+using SalonBooking.Application.Features.Tenant;
+using SalonBooking.Domain.Entities;
+
+
 namespace SalonBooking.Application.Interfaces;
 
 public interface ItenantService
@@ -9,7 +13,9 @@ public interface ItenantService
 
     Task<TenantResponse?> GetByIdAsync(long id);
 
-    Task<PagedResult<TenantResponse>> GetAllAsync(int page, int pageSize);
+    Task<PagedResult<TenantResponse>> GetTenantsAsync(TenantQueryRequest request);
+
+    Task<TenantResponse> GetAllAsync(int page, int pageSize);
 
     Task<TenantResponse?> UpdateAsync(long id, UpdateTenantRequest request);
 

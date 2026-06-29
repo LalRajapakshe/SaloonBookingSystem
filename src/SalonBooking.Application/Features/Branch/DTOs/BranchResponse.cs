@@ -1,12 +1,14 @@
-using SalonBooking.Domain.Common;
+namespace SalonBooking.Application.Features.Branch.DTOs;
 
-namespace SalonBooking.Domain.Entities;
-
-public class Branch : TenantEntity
+public class BranchResponse
 {
-    public long BranchId { get; set; }
+    public long TenantId { get; set; }
+
+   // public long BranchId { get; set; }
 
     public string BranchCode { get; set; } = string.Empty;
+
+    public bool IsActive { get; set; }  
 
     public string BranchName { get; set; } = string.Empty;
 
@@ -23,12 +25,7 @@ public class Branch : TenantEntity
     public string? ManagerName { get; set; }
 
     public bool IsHeadOffice { get; set; }
-
-    public bool IsActive { get; set; } = true;
-
-    public bool IsDeleted { get; set; } = false;
-
-    public Tenant Tenant { get; set; } = null!;
 }
 
 
+   

@@ -2,34 +2,34 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using SalonBooking.Application.Interfaces;
-using SalonBooking.Application.Features.Tenant.DTOs;
+using SalonBooking.Application.Features.Branch.DTOs;
 
 namespace SalonBooking.API.Controllers;
 
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class TenantController : ControllerBase
+public class BranchController : ControllerBase
 {
-    private readonly ItenantService _tenantService;
+    private readonly IBranchService _branchService;
 
-    public TenantController(ItenantService tenantService)
+    public BranchController(IBranchService branchService)
     {
-        _tenantService = tenantService;
+        _branchService = branchService;
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateTenantRequest request)
+    public async Task<IActionResult> Create(CreateBranchRequest request)
     {
-        var result = await _tenantService.CreateAsync(request);
+        var result = await _branchService.CreateAsync(request);
 
         return Ok(result);
     }
     [HttpGet]
-    public async Task<IActionResult> GetTenants(
-        [FromQuery] TenantQueryRequest request)
+    public async Task<IActionResult> GetBranch(
+        [FromQuery] BranchQueryRequest request)
     {
-        var result = await _tenantService.GetTenantsAsync(request);
+        var result = await _branchService.GetBranchAsync(request);
 
         return Ok(result);
     }
@@ -37,7 +37,7 @@ public class TenantController : ControllerBase
         [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id)
     {
-        var tenant = await _tenantService.GetByIdAsync(id);
+        var tenant = await _branchService.GetByIdAsync(id);
 
         if (tenant == null)
             return NotFound();
@@ -48,10 +48,10 @@ public class TenantController : ControllerBase
      [HttpPut("{id:long}")]
     public async Task<IActionResult> Update(
         long id,
-        UpdateTenantRequest request)
+        UpdateBranchRequest request)
     {
         var tenant =
-            await _tenantService.UpdateAsync(id, request);
+            await _branchService.UpdateAsync(id, request);
 
         if (tenant == null)
             return NotFound();    
@@ -62,7 +62,7 @@ public class TenantController : ControllerBase
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id)
     {
-        await _tenantService.DeleteAsync(id);
+        await _branchService.DeleteAsync(id);
 
         return NoContent();
     }

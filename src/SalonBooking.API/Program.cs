@@ -39,6 +39,7 @@ builder.Services.AddScoped<IJwtTokenService,    JwtTokenService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();    
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<ItenantService, TenantService>();
+builder.Services.AddScoped<IBranchService, BranchService>();
 
 builder.Services.AddAuthentication(
         JwtBearerDefaults.AuthenticationScheme)

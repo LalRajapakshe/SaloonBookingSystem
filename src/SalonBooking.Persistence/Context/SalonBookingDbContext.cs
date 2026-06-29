@@ -29,4 +29,6 @@ public class SalonBookingDbContext : DbContext
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
     public DbSet<Customer> Customers { get; set; }
+
+    //public DbSet<Branch> Branches { get; set; }
 }

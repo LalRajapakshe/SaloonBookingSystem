@@ -36,6 +36,12 @@ public class JwtTokenService : IJwtTokenService
 
             new(ClaimTypes.Name,
                 user.Username)
+                
+            new Claim("TenantId", user.TenantId.ToString()),
+
+            new Claim("BranchId", user.BranchId.ToString()),
+
+            new Claim(ClaimTypes.Role, user.Role)    
         };
 
         var key = new SymmetricSecurityKey(

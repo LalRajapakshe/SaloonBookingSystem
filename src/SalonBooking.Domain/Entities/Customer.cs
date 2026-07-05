@@ -1,10 +1,12 @@
+using SalonBooking.Domain.Common;
+
 namespace SalonBooking.Domain.Entities
 {
-public class Customer
+public class Customer : TenantEntity
 {
     public long CustomerId { get; set; }
 
-    public long TenantId { get; set; }
+   // public long TenantId { get; set; }
 
     public string CustomerCode { get; set; } = string.Empty;
 
@@ -22,10 +24,13 @@ public class Customer
 
     public string? Remarks { get; set; }
 
-    public bool IsActive { get; set; } = true;
+    //public bool IsActive { get; set; } = true;
 
-    public DateTime CreatedDate { get; set; }
-        = DateTime.UtcNow;
+    //public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+
+    public long BranchId { get; set; }
+
+    public Branch Branch { get; set; } = null!;    
 }
 
 }

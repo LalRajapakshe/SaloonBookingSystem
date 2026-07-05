@@ -37,5 +37,15 @@ public class CustomerConfiguration
                 x.CustomerCode
             })
             .IsUnique();
+   builder.HasOne(c => c.Tenant)
+    .WithMany()
+    .HasForeignKey(c => c.TenantId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+    builder.HasOne(c => c.Branch)
+    .WithMany()
+    .HasForeignKey(c => c.BranchId)
+    .OnDelete(DeleteBehavior.Restrict);    
+    
     }
 }

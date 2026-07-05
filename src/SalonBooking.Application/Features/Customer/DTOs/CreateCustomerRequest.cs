@@ -18,4 +18,8 @@ public string FirstName { get; set; }
     public DateTime? DateOfBirth { get; set; }
 
     public string? Remarks { get; set; }
+
+   // public int TenantId { get; set; }
+
+   // public int BranchId { get; set; }
 }

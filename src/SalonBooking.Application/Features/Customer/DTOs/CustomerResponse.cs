@@ -11,4 +11,8 @@ public class CustomerResponse
     public string MobileNo { get; set; } = string.Empty;
 
     public string? Email { get; set; }
+
+      public int TenantId { get; set; }
+
+    public int BranchId { get; set; }
 }

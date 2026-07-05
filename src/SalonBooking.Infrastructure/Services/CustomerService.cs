@@ -3,6 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
+using SalonBooking.Infrastructure.Authentication;
 using Microsoft.EntityFrameworkCore;
 
 namespace SalonBooking.Infrastructure.Services;
@@ -10,13 +11,39 @@ namespace SalonBooking.Infrastructure.Services;
 public class CustomerService : ICustomerService
 {
     private readonly SalonBookingDbContext _context;
+     private readonly ICurrentUserService _currentUserService;
 
-    public CustomerService(SalonBookingDbContext context)
+    public CustomerService(SalonBookingDbContext context, ICurrentUserService currentUserService)
     {
             _context = context;
+            _currentUserService = currentUserService;
     }
     public async Task<CustomerResponse> CreateAsync(CreateCustomerRequest request)
     {
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t =>
+                t.TenantId == _currentUserService.TenantId &&
+                !t.IsDeleted);
+
+        if (tenant == null)
+            throw new Exception("Tenant not found.");  
+
+        var branch = await _context.Branches
+        .FirstOrDefaultAsync(b =>
+        b.BranchId == _currentUserService.BranchId &&
+        b.TenantId == _currentUserService.TenantId &&
+        !b.IsDeleted);
+
+        if (branch == null)
+            throw new Exception("Branch not found.");      
+
+        var exists = await _context.Customers.AnyAsync(c =>
+            c.TenantId == _currentUserService.TenantId &&
+            c.MobileNo == request.MobileNo &&
+            !c.IsDeleted);   
+        if (exists){     
+             throw new Exception("Customer(Mobile No) already exists.."); 
+        }
         var lastCustomer = await _context.Customers
            .OrderByDescending(c => c.CustomerId).FirstOrDefaultAsync();
                 long  nextNumber = lastCustomer == null
@@ -24,8 +51,8 @@ public class CustomerService : ICustomerService
                     : lastCustomer.CustomerId + 1;
         var customer = new Customer
             {
-                TenantId = 1, // Temporary until multi-tenant login is implemented
-
+                TenantId = _currentUserService.TenantId, // Temporary until multi-tenant login is implemented
+                BranchId = _currentUserService.BranchId, // Temporary until multi-tenant login is implemented
 
                 CustomerCode = $"CUS{nextNumber:D6}", 
                // CustomerCode = $"CUS{DateTime.Now.Ticks}",
@@ -49,13 +76,17 @@ public class CustomerService : ICustomerService
             CustomerCode = customer.CustomerCode,
             FullName = $"{customer.FirstName} {customer.LastName}",
             MobileNo = customer.MobileNo,
-            Email = customer.Email
+            Email = customer.Email,
+            TenantId = customer.TenantId,
+            BranchId = customer.BranchId
         };
     }
 
   public async Task<PagedResult<CustomerResponse>> GetCustomersAsync(CustomerQueryRequest request)
   {
-    var query = _context.Customers.Where(c => c.IsActive).AsQueryable();
+    var query = _context.Customers.Where(c => c.IsActive &&
+    c.TenantId == _currentUserService.TenantId &&
+        !c.IsDeleted).AsQueryable();
     if (!string.IsNullOrWhiteSpace(request.Search))
     {
     query = query.Where(c =>
@@ -100,7 +131,9 @@ public class CustomerService : ICustomerService
     CustomerCode = c.CustomerCode,
     FullName = c.FirstName + " " + c.LastName,
     MobileNo = c.MobileNo,
-    Email = c.Email
+    Email = c.Email,
+    TenantId = c.TenantId,
+    BranchId = c.BranchId
     }).ToList();
 
     return new PagedResult<CustomerResponse>
@@ -116,7 +149,7 @@ public class CustomerService : ICustomerService
   public async Task<List<CustomerResponse>> GetAllAsync()
     {
         return await _context.Customers
-            .Where(c => c.IsActive)
+            .Where(c => c.TenantId == _currentUserService.TenantId && c.IsActive && !c.IsDeleted)
             .OrderBy(c => c.CustomerCode)
             .Select(c => new CustomerResponse
             {
@@ -124,7 +157,9 @@ public class CustomerService : ICustomerService
                 CustomerCode = c.CustomerCode,
                 FullName = c.FirstName + " " + c.LastName,
                 MobileNo = c.MobileNo,
-                Email = c.Email
+                Email = c.Email,
+                TenantId = c.TenantId,
+                BranchId = c.BranchId
             })
             .ToListAsync();
     }
@@ -132,19 +167,22 @@ public class CustomerService : ICustomerService
 public async Task<CustomerResponse?> GetByIdAsync(long customerId)
 {
     return await _context.Customers
-        .Where(c => c.CustomerId == customerId)
+        .Where(c => c.TenantId == _currentUserService.TenantId && c.CustomerId == customerId && !c.IsDeleted)
         .Select(c => new CustomerResponse
         {
             CustomerId = c.CustomerId,
             CustomerCode = c.CustomerCode,
             FullName = c.FirstName + " " + c.LastName,
             MobileNo = c.MobileNo,
-            Email = c.Email
+            Email = c.Email,
+            TenantId = c.TenantId,
+            BranchId = c.BranchId
         })
         .FirstOrDefaultAsync();
 }
 
 public async Task<CustomerResponse> UpdateAsync(
+  
     long customerId,
     UpdateCustomerRequest request)
 {
@@ -154,6 +192,32 @@ public async Task<CustomerResponse> UpdateAsync(
     if (customer == null)
         throw new Exception("Customer not found.");
 
+           var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(t =>
+                t.TenantId == _currentUserService.TenantId &&
+                !t.IsDeleted);
+
+        if (tenant == null)
+            throw new Exception("Tenant not found.");  
+
+        var branch = await _context.Branches
+        .FirstOrDefaultAsync(b =>
+        b.BranchId == _currentUserService.BranchId &&
+        b.TenantId == _currentUserService.TenantId &&
+        !b.IsDeleted);
+
+        if (branch == null)
+            throw new Exception("Branch not found.");      
+
+        var exists = await _context.Customers.AnyAsync(c =>
+            c.TenantId == _currentUserService.TenantId &&
+            c.MobileNo == request.MobileNo &&
+            c.CustomerId != customerId &&
+            !c.IsDeleted);    
+        if (exists){    
+             throw new Exception("Customer(Mobile No) already exists.."); 
+        }
+
     customer.FirstName = request.FirstName;
     customer.LastName = request.LastName;
     customer.MobileNo = request.MobileNo;
@@ -161,6 +225,9 @@ public async Task<CustomerResponse> UpdateAsync(
     customer.Gender = request.Gender;
     customer.DateOfBirth = request.DateOfBirth;
     customer.Remarks = request.Remarks;
+    customer.IsActive = request.IsActive;
+    //customer.TenantId = request.TenantId;
+    customer.BranchId = request.BranchId; 
 
     await _context.SaveChangesAsync();
 
@@ -170,19 +237,23 @@ public async Task<CustomerResponse> UpdateAsync(
         CustomerCode = customer.CustomerCode,
         FullName = customer.FirstName + " " + customer.LastName,
         MobileNo = customer.MobileNo,
-        Email = customer.Email
+        Email = customer.Email,
+        TenantId = customer.TenantId,
+        BranchId = customer.BranchId
     };
 }
 
 public async Task DeleteAsync(long customerId)
     {
         var customer = await _context.Customers
-            .FirstOrDefaultAsync(c => c.CustomerId == customerId);
+            .FirstOrDefaultAsync(c => c.CustomerId == customerId  &&
+    c.TenantId == _currentUserService.TenantId);
 
         if (customer == null)
             throw new Exception("Customer not found.");
 
         customer.IsActive = false;
+        customer.IsDeleted = true;
 
         await _context.SaveChangesAsync();
     }

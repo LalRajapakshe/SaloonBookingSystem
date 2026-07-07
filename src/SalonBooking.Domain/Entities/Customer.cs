@@ -6,7 +6,7 @@ public class Customer : TenantEntity
 {
     public long CustomerId { get; set; }
 
-   // public long TenantId { get; set; }
+    public long TenantId { get; set; } 
 
     public string CustomerCode { get; set; } = string.Empty;
 
@@ -31,6 +31,8 @@ public class Customer : TenantEntity
     public long BranchId { get; set; }
 
     public Branch Branch { get; set; } = null!;    
+
+    public Tenant Tenant { get; set; } = null!;
 }
 
 }

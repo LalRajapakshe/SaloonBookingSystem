@@ -4,7 +4,7 @@ public class BranchQueryRequest
 {
     public string? Search { get; set; }
 
-    public long TenantId { get; set; }
+    public long  TenantId { get; set; }
 
     public int Page { get; set; } = 1;
 

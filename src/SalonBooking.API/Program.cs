@@ -41,6 +41,8 @@ builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<ItenantService, TenantService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();

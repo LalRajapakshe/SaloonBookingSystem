@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SalonBooking.Persistence.Context;
 
@@ -11,9 +12,11 @@ using SalonBooking.Persistence.Context;
 namespace SalonBooking.Persistence.Migrations
 {
     [DbContext(typeof(SalonBookingDbContext))]
-    partial class SalonBookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260705104209_SyncAuditableTenantChanges")]
+    partial class SyncAuditableTenantChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -154,84 +157,6 @@ namespace SalonBooking.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Customers");
-                });
-
-            modelBuilder.Entity("SalonBooking.Domain.Entities.Employee", b =>
-                {
-                    b.Property<long>("EmployeeId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("EmployeeId"));
-
-                    b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Designation")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EmployeeCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Gender")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("HireDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MobileNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long?>("ModifiedBy")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("ModifiedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("Salary")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<long>("TenantId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("EmployeeId");
-
-                    b.HasIndex("BranchId");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("Employees");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Permission", b =>
@@ -544,25 +469,6 @@ namespace SalonBooking.Persistence.Migrations
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Customer", b =>
-                {
-                    b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SalonBooking.Domain.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("SalonBooking.Domain.Entities.Employee", b =>
                 {
                     b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
                         .WithMany()

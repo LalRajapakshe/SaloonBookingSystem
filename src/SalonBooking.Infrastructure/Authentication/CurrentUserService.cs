@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
+//using Microsoft.IHttpContextAccessor;
 using SalonBooking.Application.Interfaces;
 
 namespace SalonBooking.Infrastructure.Authentication;

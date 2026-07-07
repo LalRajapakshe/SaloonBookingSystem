@@ -30,5 +30,7 @@ public class SalonBookingDbContext : DbContext
 
     public DbSet<Customer> Customers { get; set; }
 
+    public DbSet<Employee> Employees { get; set; }
+
     //public DbSet<Branch> Branches { get; set; }
 }

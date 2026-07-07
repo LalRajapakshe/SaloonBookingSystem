@@ -12,7 +12,7 @@ public class CustomerResponse
 
     public string? Email { get; set; }
 
-      public int TenantId { get; set; }
+      public long  TenantId { get; set; }
 
-    public int BranchId { get; set; }
+    public long  BranchId { get; set; }
 }

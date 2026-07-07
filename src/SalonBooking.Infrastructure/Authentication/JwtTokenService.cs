@@ -35,7 +35,7 @@ public class JwtTokenService : IJwtTokenService
                 user.UserId.ToString()),
 
             new(ClaimTypes.Name,
-                user.Username)
+                user.Username),
                 
             new Claim("TenantId", user.TenantId.ToString()),
 

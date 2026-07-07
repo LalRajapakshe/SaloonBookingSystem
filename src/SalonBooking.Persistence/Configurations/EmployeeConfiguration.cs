@@ -4,15 +4,15 @@ using SalonBooking.Domain.Entities;
 
 namespace SalonBooking.Persistence.Configurations;
 
-public class CustomerConfiguration
-    : IEntityTypeConfiguration<Customer>
+public class EmployeeConfiguration
+    : IEntityTypeConfiguration<Employee>
 {
     public void Configure(
-        EntityTypeBuilder<Customer> builder)
+        EntityTypeBuilder<Employee> builder)
     {
-        builder.HasKey(x => x.CustomerId);
+        builder.HasKey(x => x.EmployeeId);
 
-        builder.Property(x => x.CustomerCode)
+        builder.Property(x => x.EmployeeCode)
             .HasMaxLength(20)
             .IsRequired();
 
@@ -30,22 +30,35 @@ public class CustomerConfiguration
         builder.Property(x => x.Email)
             .HasMaxLength(200);
 
+        builder.Property(x => x.Gender)
+            .HasMaxLength(20);
+
+        builder.Property(x => x.Address)
+            .HasMaxLength(250);
+
+        builder.Property(x => x.Designation)
+            .HasMaxLength(100);
+            
+        builder.Property(x => x.Salary)
+       .HasPrecision(18, 2);
+
         builder.HasIndex(x =>
             new
             {
                 x.TenantId,
-                x.CustomerCode
+                x.EmployeeCode
             })
             .IsUnique();
+
    builder.HasOne(c => c.Tenant)
     .WithMany()
     .HasForeignKey(c => c.TenantId)
-    .OnDelete(DeleteBehavior.Restrict);
+    .OnDelete(DeleteBehavior.NoAction);
 
     builder.HasOne(c => c.Branch)
     .WithMany()
     .HasForeignKey(c => c.BranchId)
-    .OnDelete(DeleteBehavior.Restrict);    
+    .OnDelete(DeleteBehavior.NoAction);    
 
    // builder.HasOne(c => c.Tenant)
     

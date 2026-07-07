@@ -29,7 +29,9 @@ var user = new User
     UserId = 1,
     Username = "admin",
     PasswordHash = "",
-    TenantId = 1
+    TenantId = 1,
+    BranchId = 1,
+    Role = "Admin"
 };
 
 var token =

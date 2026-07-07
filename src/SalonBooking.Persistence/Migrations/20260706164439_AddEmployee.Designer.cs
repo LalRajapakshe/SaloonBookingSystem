@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SalonBooking.Persistence.Context;
 
@@ -11,9 +12,11 @@ using SalonBooking.Persistence.Context;
 namespace SalonBooking.Persistence.Migrations
 {
     [DbContext(typeof(SalonBookingDbContext))]
-    partial class SalonBookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706164439_AddEmployee")]
+    partial class AddEmployee
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

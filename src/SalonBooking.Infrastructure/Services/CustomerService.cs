@@ -51,8 +51,8 @@ public class CustomerService : ICustomerService
                     : lastCustomer.CustomerId + 1;
         var customer = new Customer
             {
-                TenantId = _currentUserService.TenantId, // Temporary until multi-tenant login is implemented
-                BranchId = _currentUserService.BranchId, // Temporary until multi-tenant login is implemented
+                TenantId = _currentUserService.TenantId, 
+                BranchId = _currentUserService.BranchId, 
 
                 CustomerCode = $"CUS{nextNumber:D6}", 
                // CustomerCode = $"CUS{DateTime.Now.Ticks}",
@@ -208,6 +208,16 @@ public async Task<CustomerResponse> UpdateAsync(
 
         if (branch == null)
             throw new Exception("Branch not found.");      
+
+        branch = await _context.Branches
+            .FirstOrDefaultAsync(b =>
+            b.BranchId == request.BranchId &&
+            b.TenantId == _currentUserService.TenantId &&
+            b.IsActive &&
+            !b.IsDeleted);
+
+            if (branch == null)
+                throw new Exception("Invalid branch.");    
 
         var exists = await _context.Customers.AnyAsync(c =>
             c.TenantId == _currentUserService.TenantId &&

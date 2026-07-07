@@ -22,4 +22,6 @@ public class User : TenantEntity
     public DateTime? LastLoginDate { get; set; }
 
     public Branch? Branch { get; set; }
+
+    public string Role { get; set; } = "Admin";
 }

@@ -1,0 +1,25 @@
+using FluentValidation;
+using SalonBooking.Application.Features.ServiceCategory.DTOs;
+
+namespace SalonBooking.Application.Features.ServiceCategory.Validators;
+
+public class UpdateServiceCategoryRequestValidator
+    : AbstractValidator<UpdateServiceCategoryRequest>
+{
+    public UpdateServiceCategoryRequestValidator()
+    {
+        RuleFor(x => x.CategoryCode)
+            .NotEmpty()
+            .MaximumLength(20);
+
+        RuleFor(x => x.CategoryName)
+            .NotEmpty()
+            .MaximumLength(100);
+
+        RuleFor(x => x.Description)
+            .MaximumLength(500);
+
+        RuleFor(x => x.DisplayOrder)
+            .GreaterThanOrEqualTo(0);
+    }
+}

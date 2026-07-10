@@ -6,7 +6,7 @@ public class Customer : TenantEntity
 {
     public long CustomerId { get; set; }
 
-    public long TenantId { get; set; } 
+    //public long TenantId { get; set; } 
 
     public string CustomerCode { get; set; } = string.Empty;
 

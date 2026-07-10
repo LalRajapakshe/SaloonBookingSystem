@@ -39,6 +39,10 @@ public class SalonBookingDbContext : DbContext
 
 public DbSet<Employee> Employees => Set<Employee>();
 
+  public DbSet<Service> Services => Set<Service>();
+
+public DbSet<ServiceCategory> ServiceCategories => Set<ServiceCategory>();
+
     //public DbSet<Branch> Branches { get; set; }
 protected override void OnModelCreating(ModelBuilder modelBuilder)
 {

@@ -19,4 +19,6 @@ public class UpdateBranchRequest
     public string? ManagerName { get; set; }
 
     public bool IsHeadOffice { get; set; }
+
+      public bool IsActive { get; set; }
 }

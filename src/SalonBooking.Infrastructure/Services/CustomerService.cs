@@ -22,25 +22,22 @@ public class CustomerService : ICustomerService
     {
         var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
-                t.TenantId == _currentUserService.TenantId &&
-                !t.IsDeleted);
-
+                t.TenantId == _currentUserService.TenantId);
+                // && !t.IsDeleted
         if (tenant == null)
             throw new Exception("Tenant not found.");  
 
         var branch = await _context.Branches
         .FirstOrDefaultAsync(b =>
         b.BranchId == _currentUserService.BranchId &&
-        b.TenantId == _currentUserService.TenantId &&
-        !b.IsDeleted);
-
+        b.TenantId == _currentUserService.TenantId);
+        //&& !b.IsDeleted
         if (branch == null)
             throw new Exception("Branch not found.");      
 
         var exists = await _context.Customers.AnyAsync(c =>
             c.TenantId == _currentUserService.TenantId &&
-            c.MobileNo == request.MobileNo &&
-            !c.IsDeleted);   
+            c.MobileNo == request.MobileNo );   //&& !c.IsDeleted
         if (exists){     
              throw new Exception("Customer(Mobile No) already exists.."); 
         }
@@ -63,8 +60,8 @@ public class CustomerService : ICustomerService
                 Gender = request.Gender,
                 DateOfBirth = request.DateOfBirth,
                 Remarks = request.Remarks,
-                IsActive = true,
-                CreatedDate = DateTime.UtcNow
+              //  IsActive = true
+                //  reatedDate = DateTime.UtcNow
             };
 
         _context.Customers.Add(customer);
@@ -149,7 +146,7 @@ public class CustomerService : ICustomerService
   public async Task<List<CustomerResponse>> GetAllAsync()
     {
         return await _context.Customers
-            .Where(c => c.TenantId == _currentUserService.TenantId && c.IsActive && !c.IsDeleted)
+            .Where(c => c.TenantId == _currentUserService.TenantId && c.IsActive ) //&& !c.IsDeleted
             .OrderBy(c => c.CustomerCode)
             .Select(c => new CustomerResponse
             {
@@ -167,7 +164,7 @@ public class CustomerService : ICustomerService
 public async Task<CustomerResponse?> GetByIdAsync(long customerId)
 {
     return await _context.Customers
-        .Where(c => c.TenantId == _currentUserService.TenantId && c.CustomerId == customerId && !c.IsDeleted)
+        .Where(c => c.TenantId == _currentUserService.TenantId && c.CustomerId == customerId ) //&& !c.IsDeleted
         .Select(c => new CustomerResponse
         {
             CustomerId = c.CustomerId,
@@ -194,8 +191,8 @@ public async Task<CustomerResponse> UpdateAsync(
 
            var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
-                t.TenantId == _currentUserService.TenantId &&
-                !t.IsDeleted);
+                t.TenantId == _currentUserService.TenantId); // &&
+                //!t.IsDeleted);
 
         if (tenant == null)
             throw new Exception("Tenant not found.");  
@@ -203,8 +200,8 @@ public async Task<CustomerResponse> UpdateAsync(
         var branch = await _context.Branches
         .FirstOrDefaultAsync(b =>
         b.BranchId == _currentUserService.BranchId &&
-        b.TenantId == _currentUserService.TenantId &&
-        !b.IsDeleted);
+        b.TenantId == _currentUserService.TenantId); // &&
+       // !b.IsDeleted);
 
         if (branch == null)
             throw new Exception("Branch not found.");      
@@ -213,8 +210,8 @@ public async Task<CustomerResponse> UpdateAsync(
             .FirstOrDefaultAsync(b =>
             b.BranchId == request.BranchId &&
             b.TenantId == _currentUserService.TenantId &&
-            b.IsActive &&
-            !b.IsDeleted);
+            b.IsActive); // &&
+         //   !b.IsDeleted);
 
             if (branch == null)
                 throw new Exception("Invalid branch.");    
@@ -222,8 +219,8 @@ public async Task<CustomerResponse> UpdateAsync(
         var exists = await _context.Customers.AnyAsync(c =>
             c.TenantId == _currentUserService.TenantId &&
             c.MobileNo == request.MobileNo &&
-            c.CustomerId != customerId &&
-            !c.IsDeleted);    
+            c.CustomerId != customerId); // &&
+           // !c.IsDeleted);    
         if (exists){    
              throw new Exception("Customer(Mobile No) already exists.."); 
         }

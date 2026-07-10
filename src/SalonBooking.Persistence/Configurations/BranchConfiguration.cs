@@ -42,11 +42,11 @@ public class BranchConfiguration : IEntityTypeConfiguration<Branch>
         builder.Property(b => b.IsHeadOffice)
             .HasDefaultValue(false);
 
-        builder.Property(b => b.IsActive)
-            .HasDefaultValue(true);
+       // builder.Property(b => b.IsActive)
+       //     .HasDefaultValue(true);
 
-        builder.Property(b => b.IsDeleted)
-            .HasDefaultValue(false);
+     //   builder.Property(b => b.IsDeleted)
+     //       .HasDefaultValue(false);
 
         builder.HasOne(b => b.Tenant)
             .WithMany(t => t.Branches)

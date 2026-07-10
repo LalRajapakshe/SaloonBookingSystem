@@ -18,15 +18,15 @@ public class BranchService : IBranchService
     }
     public async Task<BranchResponse> CreateAsync(CreateBranchRequest request)
     {
-        var lastTenant = await _context.Branches
+        var lastBranch = await _context.Branches
         .OrderByDescending(t => t.BranchId)
         .FirstOrDefaultAsync();
 
-        long nextNumber = lastTenant == null
+        long nextNumber = lastBranch == null
             ? 1
-            : lastTenant.TenantId + 1;
+            : lastBranch.BranchId + 1;
 
-        string branchCode = $"TEN{nextNumber:D6}";
+        string branchCode = $"BRN{nextNumber:D6}";
         
         var branch = new Branch
         {
@@ -39,13 +39,14 @@ public class BranchService : IBranchService
             Email = request.Email,
             ManagerName = request.ManagerName,
             IsHeadOffice = request.IsHeadOffice,
-          //  IsActive  = request.,
+           // IsActive  = true,
           //  IsDeleted = request.false,
             TenantId = request.TenantId
 
         };
         _context.Branches.Add(branch);
-
+       //Console.WriteLine($"Branch.IsActive : {branch.IsActive}");
+      // Console.WriteLine($"Branch.IsDeleted: {branch.IsDeleted}");
         await _context.SaveChangesAsync();
 
         return new BranchResponse
@@ -200,6 +201,7 @@ public class BranchService : IBranchService
         branch.Email = request.Email;
         branch.ManagerName = request.ManagerName;
         branch.IsHeadOffice = request.IsHeadOffice;
+        branch.IsActive = request.IsActive;
 
         await _context.SaveChangesAsync();
 

@@ -41,6 +41,7 @@ builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<ItenantService, TenantService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 
+
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
 builder.Services.AddHttpContextAccessor();
@@ -79,6 +80,14 @@ builder.Services.AddDbContext<SalonBookingDbContext>(
         options.UseSqlServer(
             builder.Configuration.GetConnectionString(
                 "DefaultConnection")));
+//builder.Services.AddDbContext<SalonBookingDbContext>(options =>
+//{
+//    options.UseSqlServer(
+//        builder.Configuration.GetConnectionString("DefaultConnection"))
+//        .EnableSensitiveDataLogging()
+//        .LogTo(Console.WriteLine, LogLevel.Information);
+//});
+
 
 builder.Services.AddOpenApi();
 

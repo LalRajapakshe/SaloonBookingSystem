@@ -9,4 +9,8 @@ public abstract class AuditableEntity : BaseEntity
     public DateTime? ModifiedDate { get; set; }
 
     public long? ModifiedBy { get; set; }
+
+     public bool IsDeleted { get; set; }
+
+     public bool IsActive { get; set; }
 }

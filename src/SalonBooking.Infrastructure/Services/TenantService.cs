@@ -47,8 +47,8 @@ public class TenantService : ItenantService
             MaxBranches = request.MaxBranches,
             MaxUsers = request.MaxUsers,
 
-            IsActive = true,
-            IsDeleted = false
+           // IsActive = true,
+          //  IsDeleted = false
         };
         _context.Tenants.Add(tenant);
 

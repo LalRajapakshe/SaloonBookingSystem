@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SalonBooking.Domain\SalonBooking.Domain.csproj" />
+    <ProjectReference Include="..\SalonBooking.Application\SalonBooking.Application.csproj" />
   </ItemGroup>
 
 </Project>

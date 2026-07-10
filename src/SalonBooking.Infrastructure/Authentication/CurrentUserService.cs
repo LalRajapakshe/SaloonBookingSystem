@@ -1,4 +1,4 @@
-using System.Security.Claims;
+//using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 //using Microsoft.IHttpContextAccessor;
@@ -17,10 +17,10 @@ public class  CurrentUserService : ICurrentUserService
 
      public long UserId => GetClaimValue<long>(ClaimTypes.NameIdentifier);
 
-    // public long TenantId => GetClaimValue<long>("TenantId");
-    public long TenantId =>  long.Parse(
-        _httpContextAccessor.HttpContext!
-        .User.FindFirst("TenantId")!.Value);
+     public long TenantId => GetClaimValue<long>("TenantId");
+    //public long TenantId =>  long.Parse(
+    //    _httpContextAccessor.HttpContext!
+    //    .User.FindFirst("TenantId")!.Value);
 
      public long BranchId => GetClaimValue<long>("BranchId");
 

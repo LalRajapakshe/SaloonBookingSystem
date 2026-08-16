@@ -11,10 +11,12 @@ namespace SalonBooking.Infrastructure.Services;
 public class BranchService : IBranchService
 {
     private readonly SalonBookingDbContext _context;
+     private readonly ICurrentUserService _currentUserService;
 
-    public BranchService(SalonBookingDbContext context)
+    public BranchService(SalonBookingDbContext context, ICurrentUserService currentUserService)
     {
             _context = context;
+            _currentUserService = currentUserService;
     }
     public async Task<BranchResponse> CreateAsync(CreateBranchRequest request)
     {

@@ -8,9 +8,9 @@ public class UpdateServiceCategoryRequest
 
     public string Description { get; set; }  = string.Empty;
 
-    public string DisplayOrder { get; set; }= string.Empty;
+    public int DisplayOrder { get; set; }
 
     public bool IsActive { get; set; }
 
-    public long BranchId { get; set; }   
+   // public long BranchId { get; set; }   
 } 

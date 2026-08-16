@@ -79,7 +79,7 @@ public class ServiceService : IServiceService
         };
     }
 
-  public async Task<PagedResult<ServiceResponse>> GetServicesAsync(CreateServiceRequest request)
+  public async Task<PagedResult<ServiceResponse>> GetServicesAsync(ServiceQueryRequest request)
   {
     var query = _context.Services.Where(s => s.IsActive &&
     s.TenantId == _currentUserService.TenantId &&
@@ -88,8 +88,8 @@ public class ServiceService : IServiceService
     {
     query = query.Where(s =>
         s.ServiceName.Contains(request.Search) ||
-        s.Description.Contains(request.Search) ||
-        s.DurationMinutes.Contains(request.Search));
+        s.Description.Contains(request.Search));
+      //  s.DurationMinutes.Contains(request.Search));
     }
     //if (!string.IsNullOrWhiteSpace(request.Gender))
    // {
@@ -245,9 +245,9 @@ public async Task<ServiceResponse> UpdateAsync(
         TenantId = service.TenantId,
         BranchId = service.BranchId
     };
+
 }
-    };
-}
+
 
 public async Task DeleteAsync(long serviceId)
     {

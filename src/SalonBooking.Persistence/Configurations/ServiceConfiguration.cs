@@ -40,19 +40,25 @@ public class ServiceConfiguration
             new
             {
                 x.TenantId,
-                x.ServiceCode
+                x.BranchId,
+                x.ServiceName
             })
             .IsUnique();
 
-   builder.HasOne(c => c.Tenant)
-    .WithMany()
-    .HasForeignKey(c => c.TenantId)
-    .OnDelete(DeleteBehavior.NoAction);
+   //builder.HasOne(c => c.Tenant)
+   // .WithMany()
+   // .HasForeignKey(c => c.TenantId)
+  //  .OnDelete(DeleteBehavior.NoAction);
 
     builder.HasOne(c => c.Branch)
     .WithMany()
     .HasForeignKey(c => c.BranchId)
     .OnDelete(DeleteBehavior.NoAction);    
+
+    builder.HasOne(s => s.ServiceCategory)
+    .WithMany(c => c.Services)
+    .HasForeignKey(s => s.ServiceCategoryId)
+    .OnDelete(DeleteBehavior.NoAction);
 
    // builder.HasOne(c => c.Tenant)
     

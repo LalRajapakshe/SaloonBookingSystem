@@ -30,19 +30,19 @@ public class ServiceCategoryConfiguration
             new
             {
                 x.TenantId,
-                x.CategoryCode
+                x.CategoryName
             })
             .IsUnique();
 
-   builder.HasOne(c => c.Tenant)
-    .WithMany()
-    .HasForeignKey(c => c.TenantId)
-    .OnDelete(DeleteBehavior.NoAction);
+ //  builder.HasOne(c => c.Tenant)
+ //   .WithMany()
+ //   .HasForeignKey(c => c.TenantId)
+ //   .OnDelete(DeleteBehavior.NoAction);
 
-   // builder.HasOne(c => c.Branch)
-  //  .WithMany()
-  //  .HasForeignKey(c => c.BranchId)
- //   .OnDelete(DeleteBehavior.NoAction);    
+ //  builder.HasOne(c => c.Branch)
+ //   .WithMany()
+ //   .HasForeignKey(c => c.BranchId)
+//    .OnDelete(DeleteBehavior.NoAction);    
 
     }
 }

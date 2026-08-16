@@ -8,9 +8,8 @@ public class UpdateServiceCategoryRequestValidator
 {
     public UpdateServiceCategoryRequestValidator()
     {
-        RuleFor(x => x.CategoryCode)
-            .NotEmpty()
-            .MaximumLength(20);
+     //        RuleFor(x => x.BranchId)
+     //       .GreaterThan(0);
 
         RuleFor(x => x.CategoryName)
             .NotEmpty()

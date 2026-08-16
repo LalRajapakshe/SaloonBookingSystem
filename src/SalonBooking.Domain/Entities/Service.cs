@@ -27,12 +27,12 @@ public class Service : TenantEntity
     /// <summary>
     /// Internal cost (optional)
     /// </summary>
-    public decimal? Cost { get; set; }
+    public decimal Cost { get; set; }
 
     /// <summary>
     /// Employee commission percentage
     /// </summary>
-    public decimal? CommissionPercentage { get; set; }
+    public decimal CommissionPercentage { get; set; }
 
     // Navigation Properties
     public Branch Branch { get; set; } = null!;

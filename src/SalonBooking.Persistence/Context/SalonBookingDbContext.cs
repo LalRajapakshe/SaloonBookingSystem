@@ -39,8 +39,7 @@ public class SalonBookingDbContext : DbContext
 
 public DbSet<Employee> Employees => Set<Employee>();
 
-  public DbSet<Service> Services => Set<Service>();
-
+public DbSet<Service> Services => Set<Service>();
 public DbSet<ServiceCategory> ServiceCategories => Set<ServiceCategory>();
 
     //public DbSet<Branch> Branches { get; set; }
@@ -52,6 +51,9 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
     modelBuilder.ApplyConfiguration(new EmployeeConfiguration());
     modelBuilder.ApplyConfiguration(new TenantConfiguration());
     modelBuilder.ApplyConfiguration(new BranchConfiguration());
+
+    modelBuilder.ApplyConfiguration(new ServiceCategoryConfiguration());
+    modelBuilder.ApplyConfiguration(new ServiceConfiguration());
 
     // Global Query Filters will go here
 

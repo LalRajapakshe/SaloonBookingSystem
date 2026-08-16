@@ -27,13 +27,13 @@ public class ServiceCategoryService : IServiceCategoryService
         if (tenant == null)
             throw new Exception("Tenant not found.");  
 
-        var branch = await _context.Branches
-        .FirstOrDefaultAsync(b =>
-        b.BranchId == _currentUserService.BranchId &&
-        b.TenantId == _currentUserService.TenantId);
+     //  var branch = await _context.Branches
+     //   .FirstOrDefaultAsync(b =>
+     //   b.BranchId == _currentUserService.BranchId &&
+    //    b.TenantId == _currentUserService.TenantId);
         //&& !b.IsDeleted
-        if (branch == null)
-            throw new Exception("Branch not found.");      
+    //    if (branch == null)
+    //        throw new Exception("Branch not found.");      
 
         var exists = await _context.ServiceCategories.AnyAsync(c =>
             c.TenantId == _currentUserService.TenantId &&
@@ -49,7 +49,7 @@ public class ServiceCategoryService : IServiceCategoryService
         var serviceCategory = new ServiceCategory
             {
                 TenantId = _currentUserService.TenantId, 
-                BranchId = _currentUserService.BranchId, 
+              //  BranchId = _currentUserService.BranchId, 
 
                 CategoryCode = $"CAT{nextNumber:D6}", 
                // CategoryCode = $"CAT{DateTime.Now.Ticks}",
@@ -72,11 +72,11 @@ public class ServiceCategoryService : IServiceCategoryService
             Description = serviceCategory.Description,
             DisplayOrder = serviceCategory.DisplayOrder,
             TenantId = serviceCategory.TenantId,
-            BranchId = serviceCategory.BranchId
+           // BranchId = serviceCategory.BranchId
         };
     }
 
-  public async Task<PagedResult<ServiceCategoryResponse>> GetServiceCategoriesAsync(CreateServiceCategoryRequest request)
+  public async Task<PagedResult<ServiceCategoryResponse>> GetServiceCategoriesAsync(ServiceCategoryQueryRequest request)
   {
     var query = _context.ServiceCategories.Where(c => c.IsActive &&
     c.TenantId == _currentUserService.TenantId &&
@@ -99,8 +99,8 @@ public class ServiceCategoryService : IServiceCategoryService
         : query.OrderBy(c => c.CategoryName),
 
     "Description" => request.SortOrder == "desc"
-        ? query.OrderByDescending(c => c.Description)
-        : query.OrderBy(c => c.Description),
+        ? query.OrderByDescending(c => c.CategoryName)
+       // : query.OrderBy(c => c.Description),
         : query.OrderBy(c => c.CategoryName),
 
 
@@ -123,10 +123,10 @@ public class ServiceCategoryService : IServiceCategoryService
     Description = c.Description,
     DisplayOrder = c.DisplayOrder,
     TenantId = c.TenantId,
-    BranchId = c.BranchId
+   // BranchId = c.BranchId
     }).ToList();
 
-    return new PagedResult<CustomerResponse>
+    return new PagedResult<ServiceCategoryResponse>
     {
     Page = request.Page,
     PageSize = request.PageSize,
@@ -149,11 +149,7 @@ public class ServiceCategoryService : IServiceCategoryService
                 Description = c.Description,
                 DisplayOrder = c.DisplayOrder,
                 TenantId = c.TenantId,
-                BranchId = c.BranchId
-            })
-            .ToListAsync();
-                TenantId = c.TenantId,
-                BranchId = c.BranchId
+             //   BranchId = c.BranchId
             })
             .ToListAsync();
     }
@@ -170,7 +166,7 @@ public async Task<ServiceCategoryResponse?> GetByIdAsync(long serviceCategoryId)
             Description = c.Description,
             DisplayOrder = c.DisplayOrder,
             TenantId = c.TenantId,
-            BranchId = c.BranchId
+          //  BranchId = c.BranchId
         })
         .FirstOrDefaultAsync();
 }
@@ -203,15 +199,14 @@ public async Task<ServiceCategoryResponse> UpdateAsync(
         if (branch == null)
             throw new Exception("Branch not found.");      
 
-        branch = await _context.Branches
-            .FirstOrDefaultAsync(b =>
-            b.BranchId == request.BranchId &&
-            b.TenantId == _currentUserService.TenantId &&
-           !b.IsDeleted); // &&
+    //    branch = await _context.Branches
+    //        .FirstOrDefaultAsync(b =>
+    //        b.BranchId == request.BranchId &&
+    //        b.TenantId == _currentUserService.TenantId &&
+    //       !b.IsDeleted); // &&
          //   !b.IsDeleted);
-
-            if (branch == null)
-                throw new Exception("Invalid branch.");    
+    //        if (branch == null)
+    //            throw new Exception("Invalid branch.");    
 
         var exists = await _context.ServiceCategories.AnyAsync(c =>
             c.TenantId == _currentUserService.TenantId &&
@@ -227,7 +222,7 @@ public async Task<ServiceCategoryResponse> UpdateAsync(
     serviceCategory.DisplayOrder = request.DisplayOrder;
 
    //customer.TenantId = request.TenantId;
-    serviceCategory.BranchId = request.BranchId; 
+   // serviceCategory.BranchId = request.BranchId; 
 
     await _context.SaveChangesAsync();
 
@@ -239,7 +234,7 @@ public async Task<ServiceCategoryResponse> UpdateAsync(
         Description = serviceCategory.Description,
         DisplayOrder = serviceCategory.DisplayOrder,
         TenantId = serviceCategory.TenantId,
-        BranchId = serviceCategory.BranchId
+    //    BranchId = serviceCategory.BranchId
     };
 }
 

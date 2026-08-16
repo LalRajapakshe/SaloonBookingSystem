@@ -14,9 +14,9 @@ public class UpdateServiceRequestValidator
         RuleFor(x => x.ServiceCategoryId)
             .GreaterThan(0);
 
-        RuleFor(x => x.ServiceCode)
-            .NotEmpty()
-            .MaximumLength(20);
+      //  RuleFor(x => x.ServiceCode)
+      //      .NotEmpty()
+      //      .MaximumLength(20);
 
         RuleFor(x => x.ServiceName)
             .NotEmpty()
@@ -33,11 +33,11 @@ public class UpdateServiceRequestValidator
             .GreaterThanOrEqualTo(0);
 
         RuleFor(x => x.Cost)
-            .GreaterThanOrEqualTo(0)
-            .When(x => x.Cost.HasValue);
+            .GreaterThanOrEqualTo(0);
+          //  .When(x => x.Cost.HasValue);
 
         RuleFor(x => x.CommissionPercentage)
-            .InclusiveBetween(0, 100)
-            .When(x => x.CommissionPercentage.HasValue);
+            .InclusiveBetween(0, 100);
+           // .When(x => x.CommissionPercentage.HasValue);
     }
 }

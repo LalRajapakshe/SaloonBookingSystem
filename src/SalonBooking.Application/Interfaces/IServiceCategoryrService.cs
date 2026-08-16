@@ -1,4 +1,4 @@
-using SalonBooking.Application.Features.ServiceCategoryr.DTOs;
+using SalonBooking.Application.Features.ServiceCategory.DTOs;
 using SalonBooking.Application.Features.ServiceCategory;
 using SalonBooking.Domain.Entities;
 using SalonBooking.Application.Common;

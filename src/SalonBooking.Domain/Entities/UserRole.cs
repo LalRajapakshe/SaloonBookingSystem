@@ -2,7 +2,7 @@ using SalonBooking.Domain.Common;
 
 namespace SalonBooking.Domain.Entities;
 
-public class UserRole : AuditableEntity
+public class UserRole 
 {
     public long UserRoleId { get; set; }
 

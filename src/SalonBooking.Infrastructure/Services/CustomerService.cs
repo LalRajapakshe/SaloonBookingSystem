@@ -29,7 +29,7 @@ public class CustomerService : ICustomerService
 
         var branch = await _context.Branches
         .FirstOrDefaultAsync(b =>
-        b.BranchId == _currentUserService.BranchId &&
+        b.BranchId == request.BranchId &&
         b.TenantId == _currentUserService.TenantId);
         //&& !b.IsDeleted
         if (branch == null)
@@ -37,12 +37,16 @@ public class CustomerService : ICustomerService
 
         var exists = await _context.Customers.AnyAsync(c =>
             c.TenantId == _currentUserService.TenantId &&
+            c.BranchId == request.BranchId &&
             c.MobileNo == request.MobileNo );   //&& !c.IsDeleted
         if (exists){     
              throw new Exception("Customer(Mobile No) already exists.."); 
         }
         var lastCustomer = await _context.Customers
+           .IgnoreQueryFilters()
+           .Where(e => e.TenantId == tenantId)
            .OrderByDescending(c => c.CustomerId).FirstOrDefaultAsync();
+           
                 long  nextNumber = lastCustomer == null
                     ? 1
                     : lastCustomer.CustomerId + 1;

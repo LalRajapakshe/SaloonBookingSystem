@@ -4,7 +4,7 @@ public class BranchResponse
 {
     public long TenantId { get; set; }
 
-   // public long BranchId { get; set; }
+    public long BranchId { get; set; }
 
     public string BranchCode { get; set; } = string.Empty;
 

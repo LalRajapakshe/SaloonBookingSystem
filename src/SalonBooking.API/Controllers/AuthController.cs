@@ -23,10 +23,17 @@ public class AuthController : ControllerBase
 public async Task<IActionResult> Login(
     LoginRequest request)
 {
-    var response =
-        await _authenticationService
-            .LoginAsync(request);
+    try
+    {
+        var response =
+            await _authenticationService
+                .LoginAsync(request);
 
-    return Ok(response);
+        return Ok(response);
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Unauthorized();
+    }
 }
 }

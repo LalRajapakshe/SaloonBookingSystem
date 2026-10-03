@@ -16,7 +16,7 @@ public class UpdateServiceCategoryRequestValidator
             .MaximumLength(100);
 
         RuleFor(x => x.Description)
-            .MaximumLength(500);
+            .MaximumLength(100);
 
         RuleFor(x => x.DisplayOrder)
             .GreaterThanOrEqualTo(0);

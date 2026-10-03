@@ -1,41 +1,46 @@
-//using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-//using Microsoft.IHttpContextAccessor;
+using Microsoft.AspNetCore.Http;
 using SalonBooking.Application.Interfaces;
 
 namespace SalonBooking.Infrastructure.Authentication;
 
-public class  CurrentUserService : ICurrentUserService
- {
-     private readonly IHttpContextAccessor _httpContextAccessor;
+public class CurrentUserService : ICurrentUserService
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-     public CurrentUserService(IHttpContextAccessor httpContextAccessor)
-     {
-         _httpContextAccessor = httpContextAccessor;
-     }
+    public CurrentUserService(IHttpContextAccessor httpContextAccessor)
+    {
+        _httpContextAccessor = httpContextAccessor;
+    }
 
-     public long UserId => GetClaimValue<long>(ClaimTypes.NameIdentifier);
+    public bool IsAuthenticated =>
+        _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated == true;
 
-     public long TenantId => GetClaimValue<long>("TenantId");
-    //public long TenantId =>  long.Parse(
-    //    _httpContextAccessor.HttpContext!
-    //    .User.FindFirst("TenantId")!.Value);
+    public long? UserId =>
+        TryGetInt64(ClaimTypes.NameIdentifier)
+        ?? TryGetInt64(JwtRegisteredClaimNames.Sub);
 
-     public long BranchId => GetClaimValue<long>("BranchId");
+    public long? TenantId => TryGetInt64("TenantId");
 
-     public string Username => GetClaimValue<string>(ClaimTypes.Name);
+    public long? BranchId => TryGetInt64("BranchId");
 
-     public string Role => GetClaimValue<string>(ClaimTypes.Role);
+    public string? Username =>
+        TryGet(ClaimTypes.Name)
+        ?? TryGet(JwtRegisteredClaimNames.UniqueName);
 
-     private T GetClaimValue<T>(string claimType)
-     {
-         var claim = _httpContextAccessor.HttpContext?.User?.FindFirst(claimType);
-         if (claim == null)
-         {
-             throw new Exception($"Claim '{claimType}' not found.");
-         }
+    public string? Role =>
+        TryGet(ClaimTypes.Role)
+        ?? TryGet("role");
 
-         return (T)Convert.ChangeType(claim.Value, typeof(T));
-     }
- }
+    private string? TryGet(string claimType)
+    {
+        return _httpContextAccessor.HttpContext?.User?.FindFirst(claimType)?.Value;
+    }
+
+    private long? TryGetInt64(string claimType)
+    {
+        var value = TryGet(claimType);
+        return long.TryParse(value, out var parsed) ? parsed : null;
+    }
+}

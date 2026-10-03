@@ -3,6 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
+using SalonBooking.Infrastructure.Security;
 using SalonBooking.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,10 +13,14 @@ namespace SalonBooking.Infrastructure.Services;
 public class TenantService : ItenantService
 {
     private readonly SalonBookingDbContext _context;
+    private readonly ICurrentUserService _currentUserService;
 
-    public TenantService(SalonBookingDbContext context)
+    public TenantService(
+        SalonBookingDbContext context,
+        ICurrentUserService currentUserService)
     {
             _context = context;
+            _currentUserService = currentUserService;
     }
     public async Task<TenantResponse> CreateAsync(CreateTenantRequest request)
     {
@@ -70,7 +75,8 @@ public class TenantService : ItenantService
 
   public async Task<PagedResult<TenantResponse>> GetTenantsAsync(TenantQueryRequest request)
    {
-    var query = _context.Tenants.Where(c => c.IsActive).AsQueryable();
+    var tenantId = _currentUserService.RequireTenantId();
+    var query = _context.Tenants.Where(c => c.IsActive && c.TenantId == tenantId).AsQueryable();
     if (!string.IsNullOrWhiteSpace(request.Search))
     {
     query = query.Where(c =>
@@ -136,8 +142,9 @@ public class TenantService : ItenantService
     public async Task<TenantResponse?> GetByIdAsync(long id)
     {
 
+        var tenantId = _currentUserService.RequireTenantId();
         return await _context.Tenants
-        .Where(c => c.TenantId == id)
+        .Where(c => c.TenantId == id && c.TenantId == tenantId)
         .Select(c => new TenantResponse
         {
             TenantId = c.TenantId,
@@ -156,8 +163,9 @@ public class TenantService : ItenantService
 
    public async Task<TenantResponse> GetAllAsync(int page, int pageSize)
     {
+        var tenantId = _currentUserService.RequireTenantId();
         return await _context.Tenants
-        .Where(c => c.IsActive)
+        .Where(c => c.IsActive && c.TenantId == tenantId)
         .OrderBy(c => c.TenantCode)
         .Select(c => new TenantResponse
         {
@@ -178,13 +186,12 @@ public class TenantService : ItenantService
    public async Task<TenantResponse?> UpdateAsync(long id, UpdateTenantRequest request)
    {
 
+        var tenantId = _currentUserService.RequireTenantId();
         var tenant = await _context.Tenants
-        .FirstOrDefaultAsync(c => c.TenantId == id);
+        .FirstOrDefaultAsync(c => c.TenantId == id && c.TenantId == tenantId);
 
         if (tenant == null)
-            throw new Exception("Tenant not found.");
-
-        tenant.TenantId =id; //request.TenantId; 
+            throw new Exception("Tenant not found."); 
        // tenant.TenantCode = request.TenantCode;
         tenant.TenantName = request.TenantName;
         tenant.BusinessName = request.BusinessName;
@@ -213,8 +220,9 @@ public class TenantService : ItenantService
 
    public async Task<bool> DeleteAsync(long id)
    {
+            var tenantId = _currentUserService.RequireTenantId();
             var tenant = await _context.Tenants
-            .FirstOrDefaultAsync(c => c.TenantId == id);
+            .FirstOrDefaultAsync(c => c.TenantId == id && c.TenantId == tenantId);
 
         if (tenant == null)
             throw new Exception("Tenant not found.");

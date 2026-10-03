@@ -3,7 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
-using SalonBooking.Infrastructure.Authentication;
+using SalonBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace SalonBooking.Infrastructure.Services;
@@ -20,36 +20,51 @@ public class ServiceService : IServiceService
     }
     public async Task<ServiceResponse> CreateAsync(CreateServiceRequest request)
     {
+        var tenantId = _currentUserService.RequireTenantId();
+        var branchId = _currentUserService.ResolveBranchId(request.BranchId);
+
         var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
-                t.TenantId == _currentUserService.TenantId);
+                t.TenantId == tenantId);
                 // && !t.IsDeleted
         if (tenant == null)
             throw new Exception("Tenant not found.");  
 
         var branch = await _context.Branches
         .FirstOrDefaultAsync(b =>
-        b.BranchId == _currentUserService.BranchId &&
-        b.TenantId == _currentUserService.TenantId);
+        b.BranchId == branchId &&
+        b.TenantId == tenantId);
         //&& !b.IsDeleted
         if (branch == null)
-            throw new Exception("Branch not found.");      
+            throw new Exception("Branch not found.");
+
+        var category = await _context.ServiceCategories
+            .FirstOrDefaultAsync(item =>
+                item.ServiceCategoryId == request.ServiceCategoryId &&
+                item.TenantId == tenantId &&
+                item.IsActive);
+        if (category == null)
+            throw new Exception("Service category not found.");
 
         var exists = await _context.Services.AnyAsync(c =>
-            c.TenantId == _currentUserService.TenantId &&
-            c.ServiceName == request.ServiceName );   //&& !c.IsDeleted
+            c.TenantId == tenantId &&
+            c.BranchId == branchId &&
+            c.ServiceName == request.ServiceName);
         if (exists){     
              throw new Exception("Service already exists.."); 
         }
         var lastService = await _context.Services
+           .IgnoreQueryFilters()
+           .Where(item => item.TenantId == tenantId)
            .OrderByDescending(c => c.ServiceId).FirstOrDefaultAsync();
                 long  nextNumber = lastService == null
                     ? 1
                     : lastService.ServiceId + 1;
         var service = new Service
             {
-                TenantId = _currentUserService.TenantId, 
-                BranchId = _currentUserService.BranchId, 
+                TenantId = tenantId, 
+                BranchId = branchId,
+                ServiceCategoryId = request.ServiceCategoryId, 
 
                 ServiceCode = $"SER{nextNumber:D6}", 
                // ServiceCode = $"SER{DateTime.Now.Ticks}",
@@ -64,19 +79,7 @@ public class ServiceService : IServiceService
         _context.Services.Add(service);
         await _context.SaveChangesAsync();
 
-        return new ServiceResponse
-        {
-            ServiceId = service.ServiceId,
-            ServiceCode = service.ServiceCode,
-            ServiceName = service.ServiceName,
-            Description = service.Description,
-            DurationMinutes = service.DurationMinutes,
-            Price = service.Price,
-            Cost = service.Cost,
-            CommissionPercentage = service.CommissionPercentage,
-            TenantId = service.TenantId,
-            BranchId = service.BranchId
-        };
+        return ServiceResponse.From(service);
     }
 
   public async Task<PagedResult<ServiceResponse>> GetServicesAsync(ServiceQueryRequest request)
@@ -98,17 +101,21 @@ public class ServiceService : IServiceService
 
     query = request.SortBy.ToLower() switch
     {
-    "ServiceName" => request.SortOrder == "desc"
+    "servicename" => request.SortOrder == "desc"
         ? query.OrderByDescending(c => c.ServiceName)
         : query.OrderBy(c => c.ServiceName),
 
-    "Description" => request.SortOrder == "desc"
+    "description" => request.SortOrder == "desc"
         ? query.OrderByDescending(c => c.Description)
         : query.OrderBy(c => c.Description),
 
-    "DurationMinutes" => request.SortOrder == "desc"
+    "durationminutes" => request.SortOrder == "desc"
         ? query.OrderByDescending(c => c.DurationMinutes)
         : query.OrderBy(c => c.DurationMinutes),
+
+    "price" => request.SortOrder == "desc"
+        ? query.OrderByDescending(c => c.Price)
+        : query.OrderBy(c => c.Price),
 
     _ => query.OrderByDescending(c => c.ServiceId)
    };
@@ -120,16 +127,7 @@ public class ServiceService : IServiceService
     .Take(request.PageSize)
     .ToListAsync();
 
-    var items = services.Select(s => new ServiceResponse
-    {
-    ServiceId = s.ServiceId,
-    ServiceCode = s.ServiceCode,
-    ServiceName = s.ServiceName,
-    Description = s.Description,
-    DurationMinutes = s.DurationMinutes,
-    TenantId = s.TenantId,
-    BranchId = s.BranchId
-    }).ToList();
+    var items = services.Select(ServiceResponse.From).ToList();
 
     return new PagedResult<ServiceResponse>
     {
@@ -143,37 +141,22 @@ public class ServiceService : IServiceService
 
   public async Task<List<ServiceResponse>> GetAllAsync()
     {
-        return await _context.Services
+        var services = await _context.Services
             .Where(s => s.TenantId == _currentUserService.TenantId && s.IsActive ) //&& !s.IsDeleted
             .OrderBy(s => s.ServiceCode)
-            .Select(s => new ServiceResponse
-            {
-                ServiceId = s.ServiceId,
-                ServiceCode = s.ServiceCode,
-                ServiceName = s.ServiceName,
-                Description = s.Description,
-                DurationMinutes = s.DurationMinutes,
-                TenantId = s.TenantId,
-                BranchId = s.BranchId
-            })
             .ToListAsync();
+
+        return services.Select(ServiceResponse.From).ToList();
     }
 
 public async Task<ServiceResponse?> GetByIdAsync(long serviceId)
 {
-    return await _context.Services
-        .Where(s => s.TenantId == _currentUserService.TenantId && s.ServiceId == serviceId ) //&& !s.IsDeleted
-        .Select(s => new ServiceResponse
-        {
-            ServiceId = s.ServiceId,
-            ServiceCode = s.ServiceCode,
-            ServiceName = s.ServiceName,
-            Description = s.Description,
-            DurationMinutes = s.DurationMinutes,
-            TenantId = s.TenantId,
-            BranchId = s.BranchId
-        })
-        .FirstOrDefaultAsync();
+    var service = await _context.Services
+        .FirstOrDefaultAsync(s =>
+            s.TenantId == _currentUserService.TenantId &&
+            s.ServiceId == serviceId);
+
+    return service == null ? null : ServiceResponse.From(service);
 }
 
 public async Task<ServiceResponse> UpdateAsync(
@@ -181,44 +164,48 @@ public async Task<ServiceResponse> UpdateAsync(
     long serviceId,
     UpdateServiceRequest request)
 {
+    var tenantId = _currentUserService.RequireTenantId();
+    var branchId = _currentUserService.ResolveBranchId(request.BranchId);
+
     var service = await _context.Services
-        .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+        .FirstOrDefaultAsync(s =>
+            s.ServiceId == serviceId &&
+            s.TenantId == tenantId);
 
     if (service == null)
         throw new Exception("Service not found.");
 
            var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
-                t.TenantId == _currentUserService.TenantId); // &&
+                t.TenantId == tenantId); // &&
                 //!t.IsDeleted);
 
         if (tenant == null)
             throw new Exception("Tenant not found.");  
 
         var branch = await _context.Branches
-        .FirstOrDefaultAsync(b =>
-        b.BranchId == _currentUserService.BranchId &&
-        b.TenantId == _currentUserService.TenantId); // &&
-       // !b.IsDeleted);
-
-        if (branch == null)
-            throw new Exception("Branch not found.");      
-
-        branch = await _context.Branches
             .FirstOrDefaultAsync(b =>
-            b.BranchId == request.BranchId &&
-            b.TenantId == _currentUserService.TenantId &&
+            b.BranchId == branchId &&
+            b.TenantId == tenantId &&
             b.IsActive); // &&
          //   !b.IsDeleted);
 
             if (branch == null)
-                throw new Exception("Invalid branch.");    
+                throw new Exception("Invalid branch.");
+
+        var category = await _context.ServiceCategories
+            .FirstOrDefaultAsync(item =>
+                item.ServiceCategoryId == request.ServiceCategoryId &&
+                item.TenantId == tenantId &&
+                item.IsActive);
+        if (category == null)
+            throw new Exception("Service category not found.");
 
         var exists = await _context.Services.AnyAsync(s =>
-            s.TenantId == _currentUserService.TenantId &&
+            s.TenantId == tenantId &&
+            s.BranchId == branchId &&
             s.ServiceName == request.ServiceName &&
-            s.ServiceId != serviceId); // &&
-           // !s.IsDeleted);    
+            s.ServiceId != serviceId);
         if (exists){    
              throw new Exception("Service already exists.."); 
         }
@@ -231,20 +218,12 @@ public async Task<ServiceResponse> UpdateAsync(
     service.CommissionPercentage = request.CommissionPercentage;
     service.IsActive = request.IsActive;
     //service.TenantId = request.TenantId;
-    service.BranchId = request.BranchId; 
+    service.BranchId = branchId;
+    service.ServiceCategoryId = request.ServiceCategoryId; 
 
     await _context.SaveChangesAsync();
 
-    return new ServiceResponse
-    {
-        ServiceId = service.ServiceId,
-        ServiceCode = service.ServiceCode,
-        ServiceName = service.ServiceName,
-        Description = service.Description,
-        DurationMinutes = service.DurationMinutes,
-        TenantId = service.TenantId,
-        BranchId = service.BranchId
-    };
+    return ServiceResponse.From(service);
 
 }
 

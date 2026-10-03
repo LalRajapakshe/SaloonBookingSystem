@@ -3,7 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
-using SalonBooking.Domain.Enums;
+using SalonBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace SalonBooking.Infrastructure.Services;
@@ -20,7 +20,21 @@ public class BranchService : IBranchService
     }
     public async Task<BranchResponse> CreateAsync(CreateBranchRequest request)
     {
+        var tenantId = _currentUserService.RequireTenantId();
+        if (_currentUserService.BranchId is > 0)
+        {
+            throw new UnauthorizedAccessException(
+                "You cannot create a branch outside your branch scope.");
+        }
+
+        var tenant = await _context.Tenants
+            .FirstOrDefaultAsync(item => item.TenantId == tenantId);
+        if (tenant == null)
+            throw new Exception("Tenant not found.");
+
         var lastBranch = await _context.Branches
+        .IgnoreQueryFilters()
+        .Where(item => item.TenantId == tenantId)
         .OrderByDescending(t => t.BranchId)
         .FirstOrDefaultAsync();
 
@@ -43,7 +57,7 @@ public class BranchService : IBranchService
             IsHeadOffice = request.IsHeadOffice,
            // IsActive  = true,
           //  IsDeleted = request.false,
-            TenantId = request.TenantId
+            TenantId = tenantId
 
         };
         _context.Branches.Add(branch);
@@ -54,6 +68,7 @@ public class BranchService : IBranchService
         return new BranchResponse
         {
             TenantId = branch.TenantId,
+            BranchId = branch.BranchId,
             BranchCode = branch.BranchCode,
             BranchName = branch.BranchName,
             AddressLine1 = branch.AddressLine1,
@@ -121,6 +136,7 @@ public class BranchService : IBranchService
     var items = branch.Select(c => new BranchResponse
     {
         TenantId = c.TenantId,
+        BranchId = c.BranchId,
         BranchCode = c.BranchCode,
         BranchName = c.BranchName,
         AddressLine1 = c.AddressLine1,
@@ -150,6 +166,7 @@ public class BranchService : IBranchService
         .Select(c => new BranchResponse
         {
             TenantId = c.TenantId,
+            BranchId = c.BranchId,
             BranchCode = c.BranchCode,
             BranchName = c.BranchName,
             AddressLine1 = c.AddressLine1,
@@ -171,6 +188,7 @@ public class BranchService : IBranchService
         .Select(c => new BranchResponse
         {
             TenantId = c.TenantId,
+            BranchId = c.BranchId,
             BranchCode = c.BranchCode,
             BranchName = c.BranchName,
             AddressLine1 = c.AddressLine1,
@@ -187,14 +205,15 @@ public class BranchService : IBranchService
    public async Task<BranchResponse?> UpdateAsync(long id, UpdateBranchRequest request)
    {
 
+        var tenantId = _currentUserService.RequireTenantId();
         var branch = await _context.Branches
-        .FirstOrDefaultAsync(c => c.BranchId == id);
+        .FirstOrDefaultAsync(c =>
+            c.BranchId == id &&
+            c.TenantId == tenantId);
 
         if (branch == null)
-            throw new Exception("Tenant not found.");
+            throw new Exception("Branch not found.");
 
-        branch.BranchId =id; //request.TenantId; 
-        branch.TenantId = request.TenantId;
         branch.BranchName = request.BranchName;
         branch.AddressLine1 = request.AddressLine1;
         branch.AddressLine2 = request.AddressLine2;
@@ -210,7 +229,8 @@ public class BranchService : IBranchService
             return new BranchResponse
         {
             TenantId = branch.TenantId,
-            BranchCode = "",
+            BranchId = branch.BranchId,
+            BranchCode = branch.BranchCode,
             BranchName = branch.BranchName,
             AddressLine1 = branch.AddressLine1,
             AddressLine2 = branch.AddressLine2,

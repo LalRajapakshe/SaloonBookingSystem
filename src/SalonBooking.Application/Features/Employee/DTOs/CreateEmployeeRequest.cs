@@ -4,7 +4,7 @@ public class CreateEmployeeRequest
 {
   //  public string EmployeeCode { get; set } = string.Empty;
 
-    //public long BranchId { get; set; }
+    public long BranchId { get; set; }
 
     public string FirstName { get; set; }  = string.Empty;
 

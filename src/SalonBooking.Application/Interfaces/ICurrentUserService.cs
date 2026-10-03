@@ -1,21 +1,16 @@
-using SalonBooking.Application.Common;
-//using SalonBooking.Application.Features.Branch.DTOs;
-
-using SalonBooking.Application.Features.Tenant;
-using SalonBooking.Domain.Entities;
-
-
 namespace SalonBooking.Application.Interfaces;
 
 public interface ICurrentUserService
 {
-    long UserId { get; }
+    bool IsAuthenticated { get; }
 
-    long TenantId { get; }
+    long? UserId { get; }
 
-    long BranchId { get; }
+    long? TenantId { get; }
 
-    string Username { get; }
+    long? BranchId { get; }
 
-    string Role { get; }
+    string? Username { get; }
+
+    string? Role { get; }
 }

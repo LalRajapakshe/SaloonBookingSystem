@@ -3,7 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
-using SalonBooking.Infrastructure.Authentication;
+using SalonBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace SalonBooking.Infrastructure.Services;
@@ -20,38 +20,41 @@ public class EmployeeService : IEmployeeService
     }
     public async Task<EmployeeResponse> CreateAsync(CreateEmployeeRequest request)
     {
+        var tenantId = _currentUserService.RequireTenantId();
+        var branchId = _currentUserService.ResolveBranchId(request.BranchId);
+
         var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
-                t.TenantId == _currentUserService.TenantId);
+                t.TenantId == tenantId);
 
         if (tenant == null)
             throw new Exception("Tenant not found.");  
 
         var branch = await _context.Branches
         .FirstOrDefaultAsync(b =>
-        b.BranchId == _currentUserService.BranchId &&
-        b.TenantId == _currentUserService.TenantId &&
+        b.BranchId == branchId &&
+        b.TenantId == tenantId &&
         b.IsActive); //&& !b.IsDeleted
 
         if (branch == null)
 
             throw new Exception("Branch not found.");      
 
-        var exists = await _context.Employees.AnyAsync(c =>
-            c.TenantId == _currentUserService.TenantId &&
-            c.MobileNo == request.MobileNo);  //&& !c.IsDeleted   
-        if (exists){     
-             throw new Exception("Employee(Mobile No) already exists.."); 
+        if (await MobileExistsAsync(tenantId, request.MobileNo))
+        {
+             throw new Exception("Employee mobile number already exists.");
         }
         var lastEmployee = await _context.Employees
+           .IgnoreQueryFilters()
+           .Where(e => e.TenantId == tenantId)
            .OrderByDescending(e => e.EmployeeId).FirstOrDefaultAsync();
                 long  nextNumber = lastEmployee == null
                     ? 1
                     : lastEmployee.EmployeeId + 1;
         var employee = new Employee
             {
-                TenantId = _currentUserService.TenantId, // Temporary until multi-tenant login is implemented
-                BranchId = _currentUserService.BranchId, // Temporary until multi-tenant login is implemented
+                TenantId = tenantId,
+                BranchId = branchId,
 
                 EmployeeCode = $"EMP{nextNumber:D6}", 
                 FirstName = request.FirstName,
@@ -71,18 +74,7 @@ public class EmployeeService : IEmployeeService
         _context.Employees.Add(employee);
         await _context.SaveChangesAsync();
 
-        return new EmployeeResponse
-        {
-            EmployeeId = employee.EmployeeId,
-            EmployeeCode = employee.EmployeeCode,
-            FullName = $"{employee.FirstName} {employee.LastName}",
-            MobileNo = employee.MobileNo,
-            Email = employee.Email,
-            Gender = employee.Gender,
-            Designation = employee.Designation,
-            TenantId = employee.TenantId,
-            BranchId = employee.BranchId
-        };
+        return EmployeeResponse.From(employee);
     }
 
   public async Task<PagedResult<EmployeeResponse>> GetEmployeesAsync(EmployeeQueryRequest request)
@@ -129,18 +121,7 @@ public class EmployeeService : IEmployeeService
     .Take(request.PageSize)
     .ToListAsync();
 
-    var items = employees.Select(e => new EmployeeResponse
-    {
-    EmployeeId = e.EmployeeId,
-    EmployeeCode = e.EmployeeCode,
-    FullName = e.FirstName + " " + e.LastName,
-    MobileNo = e.MobileNo,
-    Email = e.Email,
-    Gender = e.Gender,
-    Designation = e.Designation,
-    TenantId = e.TenantId,
-    BranchId = e.BranchId
-    }).ToList();
+    var items = employees.Select(EmployeeResponse.From).ToList();
 
     return new PagedResult<EmployeeResponse>
     {
@@ -154,41 +135,23 @@ public class EmployeeService : IEmployeeService
 
   public async Task<List<EmployeeResponse>> GetAllAsync()
     {
-        return await _context.Employees
+        var employees = await _context.Employees
             .Where(e => e.TenantId == _currentUserService.TenantId && e.IsActive) //&& !e.IsDeleted
             .OrderBy(e => e.EmployeeCode)
-            .Select(e => new EmployeeResponse
-            {
-                EmployeeId = e.EmployeeId,
-                EmployeeCode = e.EmployeeCode,
-                FullName = e.FirstName + " " + e.LastName,
-                MobileNo = e.MobileNo,
-                Email = e.Email,
-                Gender = e.Gender,
-                Designation = e.Designation,
-                TenantId = e.TenantId,
-                BranchId = e.BranchId
-            })
             .ToListAsync();
+
+        return employees.Select(EmployeeResponse.From).ToList();
     }
 
 public async Task<EmployeeResponse?> GetByIdAsync(long employeeId)
 {
-    return await _context.Employees
-        .Where(e => e.TenantId == _currentUserService.TenantId && e.EmployeeId == employeeId && e.IsActive) //&& !e.IsDeleted
-        .Select(e => new    EmployeeResponse
-        {
-            EmployeeId = e.EmployeeId,
-            EmployeeCode = e.EmployeeCode,
-            FullName = e.FirstName + " " + e.LastName,
-            MobileNo = e.MobileNo,
-            Email = e.Email,
-            Gender = e.Gender,
-            Designation = e.Designation,
-            TenantId = e.TenantId,
-            BranchId = e.BranchId
-        })
-        .FirstOrDefaultAsync();
+    var employee = await _context.Employees
+        .FirstOrDefaultAsync(e =>
+            e.TenantId == _currentUserService.TenantId &&
+            e.EmployeeId == employeeId &&
+            e.IsActive);
+
+    return employee == null ? null : EmployeeResponse.From(employee);
 }
 
 public async Task<EmployeeResponse> UpdateAsync(
@@ -196,42 +159,36 @@ public async Task<EmployeeResponse> UpdateAsync(
     long employeeId,
        UpdateEmployeeRequest  request)
 {
+    var tenantId = _currentUserService.RequireTenantId();
+    var branchId = _currentUserService.ResolveBranchId(request.BranchId);
+
     var employee = await _context.Employees
-        .FirstOrDefaultAsync(e => e.EmployeeId == employeeId);
+        .FirstOrDefaultAsync(e =>
+            e.EmployeeId == employeeId &&
+            e.TenantId == tenantId);
 
     if (employee == null)
         throw new Exception("Employee not found.");
 
            var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
-                t.TenantId == _currentUserService.TenantId);  //&& !t.IsDeleted
+                t.TenantId == tenantId);  //&& !t.IsDeleted
 
         if (tenant == null)
             throw new Exception("Tenant not found.");  
 
         var branch = await _context.Branches
-        .FirstOrDefaultAsync(b =>
-        b.BranchId == _currentUserService.BranchId &&
-        b.TenantId == _currentUserService.TenantId);  // && !b.IsDeleted
-
-        if (branch == null)
-            throw new Exception("Branch not found.");      
-
-        branch = await _context.Branches
             .FirstOrDefaultAsync(b =>
-            b.BranchId == request.BranchId &&
-            b.TenantId == _currentUserService.TenantId &&
+            b.BranchId == branchId &&
+            b.TenantId == tenantId &&
             b.IsActive);  // && !b.IsDeleted
 
             if (branch == null)
                 throw new Exception("Invalid branch.");    
 
-        var exists = await _context.Customers.AnyAsync(c =>
-            c.TenantId == _currentUserService.TenantId &&
-            c.MobileNo == request.MobileNo &&
-            c.CustomerId != employeeId);  // && !c.IsDeleted    
-        if (exists){    
-             throw new Exception("Customer(Mobile No) already exists.."); 
+        if (await MobileExistsAsync(tenantId, request.MobileNo, employeeId))
+        {
+             throw new Exception("Employee mobile number already exists."); 
         }
 
     employee.FirstName = request.FirstName;
@@ -248,20 +205,32 @@ public async Task<EmployeeResponse> UpdateAsync(
     //employee.Remarks = request.Remarks;
     employee.IsActive = request.IsActive;
     //employee.TenantId = request.TenantId;
-    employee.BranchId = request.BranchId; 
+    employee.BranchId = branchId; 
 
     await _context.SaveChangesAsync();
 
-    return new EmployeeResponse
+    return EmployeeResponse.From(employee);
+}
+
+private Task<bool> MobileExistsAsync(
+    long tenantId,
+    string mobileNo,
+    long? exceptEmployeeId = null)
+{
+    var query = _context.Employees
+        .IgnoreQueryFilters()
+        .Where(employee =>
+            employee.TenantId == tenantId &&
+            !employee.IsDeleted &&
+            employee.MobileNo == mobileNo);
+
+    if (exceptEmployeeId.HasValue)
     {
-        EmployeeId = employee.EmployeeId,
-        EmployeeCode = employee.EmployeeCode,
-        FullName = employee.FirstName + " " + employee.LastName,
-        MobileNo = employee.MobileNo,
-        Email = employee.Email,
-        TenantId = employee.TenantId,
-        BranchId = employee.BranchId
-    };
+        query = query.Where(employee =>
+            employee.EmployeeId != exceptEmployeeId.Value);
+    }
+
+    return query.AnyAsync();
 }
 
 public async Task DeleteAsync(long employeeId)

@@ -16,18 +16,33 @@ using FluentValidation.AspNetCore;
 using SalonBooking.Application.Features.Customer.Validators;
 
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Identity;
+using SalonBooking.Domain.Entities;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 
+var connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Database connection string is missing. Set ConnectionStrings:DefaultConnection with user secrets or environment variables.");
+}
+
 var jwtSettings =
     builder.Configuration.GetSection("JwtSettings");
 
 var secretKey =
-    jwtSettings["SecretKey"]
-    ?? throw new InvalidOperationException(
-        "JWT Secret Key is missing.");
+    jwtSettings["SecretKey"];
+
+if (string.IsNullOrWhiteSpace(secretKey))
+{
+    throw new InvalidOperationException(
+        "JWT Secret Key is missing. Set JwtSettings:SecretKey with user secrets or environment variables.");
+}
 
 var key =
     Encoding.UTF8.GetBytes(secretKey);
@@ -36,6 +51,7 @@ builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSet
 
 builder.Services.AddScoped<IJwtTokenService,    JwtTokenService>();    
 
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();    
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<ItenantService, TenantService>();
@@ -70,8 +86,13 @@ builder.Services.AddAuthentication(
                     jwtSettings["Audience"],
 
                 IssuerSigningKey =
-                    new SymmetricSecurityKey(key)
+                    new SymmetricSecurityKey(key),
+
+                NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier,
+                RoleClaimType = System.Security.Claims.ClaimTypes.Role
             };
+
+        options.MapInboundClaims = true;
     });    
 
     builder.Services.AddAuthorization();
@@ -80,9 +101,7 @@ builder.Services.AddAuthentication(
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddDbContext<SalonBookingDbContext>(
     options =>
-        options.UseSqlServer(
-            builder.Configuration.GetConnectionString(
-                "DefaultConnection")));
+        options.UseSqlServer(connectionString));
 //builder.Services.AddDbContext<SalonBookingDbContext>(options =>
 //{
 //    options.UseSqlServer(
@@ -142,6 +161,7 @@ if (app.Environment.IsDevelopment())
 {
         app.UseSwagger();
     app.UseSwaggerUI();
+    await DevelopmentAdminSeeder.SeedAsync(app.Services);
    // app.MapOpenApi();
 }
 

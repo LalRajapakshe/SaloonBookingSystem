@@ -21,51 +21,60 @@ public class JwtTokenService : IJwtTokenService
         _jwtSettings = jwtOptions.Value;
     }
 
-    public string GenerateToken(User user)
+    public string GenerateToken(
+        User user,
+        IReadOnlyCollection<string> roles)
     {
+        var userId = user.UserId.ToString();
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub,
-                user.UserId.ToString()),
-
-            new(JwtRegisteredClaimNames.UniqueName,
-                user.Username),
-
-            new(ClaimTypes.NameIdentifier,
-                user.UserId.ToString()),
-
-            new(ClaimTypes.Name,
-                user.Username),
-                
-            new Claim("TenantId", user.TenantId.ToString()),
-
-            new Claim("BranchId", user.BranchId.ToString()),
-
-            new Claim(ClaimTypes.Role, user.Role)    
+            new(JwtRegisteredClaimNames.Sub, userId),
+            new(ClaimTypes.NameIdentifier, userId),
+            new(JwtRegisteredClaimNames.UniqueName, user.Username),
+            new(ClaimTypes.Name, user.Username),
+            new("TenantId", user.TenantId.ToString())
         };
 
+        if (user.BranchId is > 0)
+        {
+            claims.Add(new Claim(
+                "BranchId",
+                user.BranchId.Value.ToString()));
+        }
+
+        var roleNames = roles
+            .Where(role => !string.IsNullOrWhiteSpace(role))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (roleNames.Count == 0 &&
+            !string.IsNullOrWhiteSpace(user.Role))
+        {
+            roleNames.Add(user.Role);
+        }
+
+        foreach (var role in roleNames)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(
-                _jwtSettings.SecretKey));
+            Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
 
-        var credentials =
-            new SigningCredentials(
-                key,
-                SecurityAlgorithms.HmacSha256);
+        var credentials = new SigningCredentials(
+            key,
+            SecurityAlgorithms.HmacSha256);
 
-        var expires =
-            DateTime.UtcNow.AddMinutes(
-                _jwtSettings.ExpiryMinutes);
+        var expires = DateTime.UtcNow.AddMinutes(
+            _jwtSettings.ExpiryMinutes);
 
-        var token =
-            new JwtSecurityToken(
-                issuer: _jwtSettings.Issuer,
-                audience: _jwtSettings.Audience,
-                claims: claims,
-                expires: expires,
-                signingCredentials: credentials);
+        var token = new JwtSecurityToken(
+            issuer: _jwtSettings.Issuer,
+            audience: _jwtSettings.Audience,
+            claims: claims,
+            expires: expires,
+            signingCredentials: credentials);
 
-        return new JwtSecurityTokenHandler()
-            .WriteToken(token);
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

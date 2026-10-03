@@ -20,10 +20,10 @@ public class UpdateServiceRequestValidator
 
         RuleFor(x => x.ServiceName)
             .NotEmpty()
-            .MaximumLength(150);
+            .MaximumLength(100);
 
         RuleFor(x => x.Description)
-            .MaximumLength(500);
+            .MaximumLength(250);
 
         RuleFor(x => x.DurationMinutes)
             .GreaterThan(0)

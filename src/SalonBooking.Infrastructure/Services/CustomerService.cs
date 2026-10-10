@@ -28,7 +28,7 @@ public class CustomerService : ICustomerService
                 t.TenantId == tenantId);
                 // && !t.IsDeleted
         if (tenant == null)
-            throw new Exception("Tenant not found.");  
+            throw new KeyNotFoundException();
 
         var branch = await _context.Branches
         .FirstOrDefaultAsync(b =>
@@ -36,7 +36,7 @@ public class CustomerService : ICustomerService
         b.TenantId == tenantId);
         //&& !b.IsDeleted
         if (branch == null)
-            throw new Exception("Branch not found.");      
+            throw new KeyNotFoundException();      
 
         var exists = await _context.Customers.AnyAsync(c =>
             c.TenantId == tenantId &&
@@ -144,12 +144,15 @@ public class CustomerService : ICustomerService
 
 public async Task<CustomerResponse?> GetByIdAsync(long customerId)
 {
-    var customer = await _context.Customers
-        .FirstOrDefaultAsync(c =>
-            c.TenantId == _currentUserService.TenantId &&
-            c.CustomerId == customerId);
+    var tenantId = _currentUserService.RequireTenantId();
+    var customer = await _context.Customers.RequireOwnedAsync(
+        _currentUserService,
+        item => item.CustomerId == customerId &&
+                item.TenantId == tenantId &&
+                !item.IsDeleted,
+        item => item.BranchId);
 
-    return customer == null ? null : CustomerResponse.From(customer);
+    return CustomerResponse.From(customer);
 }
 
 public async Task<CustomerResponse> UpdateAsync(
@@ -158,15 +161,13 @@ public async Task<CustomerResponse> UpdateAsync(
     UpdateCustomerRequest request)
 {
     var tenantId = _currentUserService.RequireTenantId();
+    var customer = await _context.Customers.RequireOwnedAsync(
+        _currentUserService,
+        item => item.CustomerId == customerId &&
+                item.TenantId == tenantId &&
+                !item.IsDeleted,
+        item => item.BranchId);
     var branchId = _currentUserService.ResolveBranchId(request.BranchId);
-
-    var customer = await _context.Customers
-        .FirstOrDefaultAsync(c =>
-            c.CustomerId == customerId &&
-            c.TenantId == tenantId);
-
-    if (customer == null)
-        throw new Exception("Customer not found.");
 
            var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
@@ -174,7 +175,7 @@ public async Task<CustomerResponse> UpdateAsync(
                 //!t.IsDeleted);
 
         if (tenant == null)
-            throw new Exception("Tenant not found.");  
+            throw new KeyNotFoundException();
 
         var branch = await _context.Branches
             .FirstOrDefaultAsync(b =>
@@ -184,7 +185,7 @@ public async Task<CustomerResponse> UpdateAsync(
          //   !b.IsDeleted);
 
             if (branch == null)
-                throw new Exception("Invalid branch.");    
+                throw new KeyNotFoundException();    
 
         var exists = await _context.Customers.AnyAsync(c =>
             c.TenantId == _currentUserService.TenantId &&
@@ -213,12 +214,13 @@ public async Task<CustomerResponse> UpdateAsync(
 
 public async Task DeleteAsync(long customerId)
     {
-        var customer = await _context.Customers
-            .FirstOrDefaultAsync(c => c.CustomerId == customerId  &&
-    c.TenantId == _currentUserService.TenantId);
-
-        if (customer == null)
-            throw new Exception("Customer not found.");
+        var tenantId = _currentUserService.RequireTenantId();
+        var customer = await _context.Customers.RequireOwnedAsync(
+            _currentUserService,
+            item => item.CustomerId == customerId &&
+                    item.TenantId == tenantId &&
+                    !item.IsDeleted,
+            item => item.BranchId);
 
         customer.IsActive = false;
         customer.IsDeleted = true;

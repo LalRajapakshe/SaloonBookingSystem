@@ -10,6 +10,8 @@ public class Employee : TenantEntity
 
     public long BranchId { get; set; }
 
+    public long? UserId { get; set; }
+
     public string FirstName { get; set; } = string.Empty;
 
     public string LastName { get; set; } = string.Empty;
@@ -33,4 +35,6 @@ public class Employee : TenantEntity
     public Branch Branch { get; set; } = null!;
 
     public Tenant Tenant { get; set; } = null!;
+
+    public User? User { get; set; }
 }

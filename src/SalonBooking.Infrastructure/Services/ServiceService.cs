@@ -28,7 +28,7 @@ public class ServiceService : IServiceService
                 t.TenantId == tenantId);
                 // && !t.IsDeleted
         if (tenant == null)
-            throw new Exception("Tenant not found.");  
+            throw new KeyNotFoundException();
 
         var branch = await _context.Branches
         .FirstOrDefaultAsync(b =>
@@ -36,7 +36,7 @@ public class ServiceService : IServiceService
         b.TenantId == tenantId);
         //&& !b.IsDeleted
         if (branch == null)
-            throw new Exception("Branch not found.");
+            throw new KeyNotFoundException();
 
         var category = await _context.ServiceCategories
             .FirstOrDefaultAsync(item =>
@@ -44,7 +44,7 @@ public class ServiceService : IServiceService
                 item.TenantId == tenantId &&
                 item.IsActive);
         if (category == null)
-            throw new Exception("Service category not found.");
+            throw new KeyNotFoundException();
 
         var exists = await _context.Services.AnyAsync(c =>
             c.TenantId == tenantId &&
@@ -151,12 +151,15 @@ public class ServiceService : IServiceService
 
 public async Task<ServiceResponse?> GetByIdAsync(long serviceId)
 {
-    var service = await _context.Services
-        .FirstOrDefaultAsync(s =>
-            s.TenantId == _currentUserService.TenantId &&
-            s.ServiceId == serviceId);
+    var tenantId = _currentUserService.RequireTenantId();
+    var service = await _context.Services.RequireOwnedAsync(
+        _currentUserService,
+        item => item.ServiceId == serviceId &&
+                item.TenantId == tenantId &&
+                !item.IsDeleted,
+        item => item.BranchId);
 
-    return service == null ? null : ServiceResponse.From(service);
+    return ServiceResponse.From(service);
 }
 
 public async Task<ServiceResponse> UpdateAsync(
@@ -165,15 +168,13 @@ public async Task<ServiceResponse> UpdateAsync(
     UpdateServiceRequest request)
 {
     var tenantId = _currentUserService.RequireTenantId();
+    var service = await _context.Services.RequireOwnedAsync(
+        _currentUserService,
+        item => item.ServiceId == serviceId &&
+                item.TenantId == tenantId &&
+                !item.IsDeleted,
+        item => item.BranchId);
     var branchId = _currentUserService.ResolveBranchId(request.BranchId);
-
-    var service = await _context.Services
-        .FirstOrDefaultAsync(s =>
-            s.ServiceId == serviceId &&
-            s.TenantId == tenantId);
-
-    if (service == null)
-        throw new Exception("Service not found.");
 
            var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
@@ -181,7 +182,7 @@ public async Task<ServiceResponse> UpdateAsync(
                 //!t.IsDeleted);
 
         if (tenant == null)
-            throw new Exception("Tenant not found.");  
+            throw new KeyNotFoundException();
 
         var branch = await _context.Branches
             .FirstOrDefaultAsync(b =>
@@ -191,7 +192,7 @@ public async Task<ServiceResponse> UpdateAsync(
          //   !b.IsDeleted);
 
             if (branch == null)
-                throw new Exception("Invalid branch.");
+                throw new KeyNotFoundException();
 
         var category = await _context.ServiceCategories
             .FirstOrDefaultAsync(item =>
@@ -199,7 +200,7 @@ public async Task<ServiceResponse> UpdateAsync(
                 item.TenantId == tenantId &&
                 item.IsActive);
         if (category == null)
-            throw new Exception("Service category not found.");
+            throw new KeyNotFoundException();
 
         var exists = await _context.Services.AnyAsync(s =>
             s.TenantId == tenantId &&
@@ -230,11 +231,13 @@ public async Task<ServiceResponse> UpdateAsync(
 
 public async Task DeleteAsync(long serviceId)
     {
-        var service = await _context.Services
-            .FirstOrDefaultAsync(s => s.ServiceId == serviceId && s.TenantId == _currentUserService.TenantId);
-
-        if (service == null)
-            throw new Exception("Service not found.");
+        var tenantId = _currentUserService.RequireTenantId();
+        var service = await _context.Services.RequireOwnedAsync(
+            _currentUserService,
+            item => item.ServiceId == serviceId &&
+                    item.TenantId == tenantId &&
+                    !item.IsDeleted,
+            item => item.BranchId);
 
         service.IsActive = false;
         service.IsDeleted = true;

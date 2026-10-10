@@ -4,7 +4,6 @@ using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
 using SalonBooking.Infrastructure.Security;
-using SalonBooking.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -22,55 +21,19 @@ public class TenantService : ItenantService
             _context = context;
             _currentUserService = currentUserService;
     }
-    public async Task<TenantResponse> CreateAsync(CreateTenantRequest request)
+    public Task<TenantResponse> CreateAsync(CreateTenantRequest request)
     {
-        var lastTenant = await _context.Tenants
-        .OrderByDescending(t => t.TenantId)
-        .FirstOrDefaultAsync();
-
-        long nextNumber = lastTenant == null
-            ? 1
-            : lastTenant.TenantId + 1;
-
-        string tenantCode = $"TEN{nextNumber:D6}";
-        var tenant = new Tenant
-        {
-            TenantCode = tenantCode,
-            TenantName = request.TenantName,
-            BusinessName = request.BusinessName,
-            BusinessRegistrationNo = request.BusinessRegistrationNo,
-            ContactPerson = request.ContactPerson,
-            PhoneNo = request.PhoneNo,
-            Email = request.Email,
-            Address = request.Address,
-            LogoUrl = request.LogoUrl,
-
-            SubscriptionPlan = SubscriptionPlan.Trial,
-            SubscriptionStartDate = DateTime.UtcNow,
-            SubscriptionEndDate = DateTime.UtcNow.AddDays(30),
-
-            MaxBranches = request.MaxBranches,
-            MaxUsers = request.MaxUsers,
-
-           // IsActive = true,
-          //  IsDeleted = false
-        };
-        _context.Tenants.Add(tenant);
-
-        await _context.SaveChangesAsync();
-        return new TenantResponse
-        {
-            TenantId = tenant.TenantId,
-            TenantCode = tenant.TenantCode,
-            TenantName = tenant.TenantName,
-            BusinessName = tenant.BusinessName,
-            ContactPerson = tenant.ContactPerson,
-            PhoneNo = tenant.PhoneNo,
-            Email = tenant.Email,
-            IsActive = tenant.IsActive,
-            MaxBranches = tenant.MaxBranches,
-            MaxUsers = tenant.MaxUsers
-        };
+        // This API is tenant-scoped. Every current role, including a tenant
+        // Admin, belongs to one tenant. There is no platform administrator
+        // who can provision a tenant for someone else, so creation is closed.
+        //
+        // A later platform administrator must live outside the tenant filter.
+        // TenantCode must be generated from every tenant with
+        // IgnoreQueryFilters. The caller filter hides other tenants and would
+        // reuse a code that already exists.
+        _ = request;
+        throw new UnauthorizedAccessException(
+            "Tenant provisioning is not available.");
     }
 
   public async Task<PagedResult<TenantResponse>> GetTenantsAsync(TenantQueryRequest request)
@@ -191,7 +154,7 @@ public class TenantService : ItenantService
         .FirstOrDefaultAsync(c => c.TenantId == id && c.TenantId == tenantId);
 
         if (tenant == null)
-            throw new Exception("Tenant not found."); 
+            throw new KeyNotFoundException(); 
        // tenant.TenantCode = request.TenantCode;
         tenant.TenantName = request.TenantName;
         tenant.BusinessName = request.BusinessName;
@@ -225,7 +188,7 @@ public class TenantService : ItenantService
             .FirstOrDefaultAsync(c => c.TenantId == id && c.TenantId == tenantId);
 
         if (tenant == null)
-            throw new Exception("Tenant not found.");
+            throw new KeyNotFoundException();
 
         tenant.IsActive = false;
 

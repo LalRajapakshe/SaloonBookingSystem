@@ -17,6 +17,7 @@ using SalonBooking.Application.Features.Customer.Validators;
 
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Identity;
+using SalonBooking.API.Infrastructure;
 using SalonBooking.Domain.Entities;
 
 
@@ -58,10 +59,15 @@ builder.Services.AddScoped<ItenantService, TenantService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 
 
-builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IEmployeeService, SalonBooking.Infrastructure.Services.EmployeeService>();
 
 builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
 builder.Services.AddScoped<IServiceService, ServiceService>();
+builder.Services.AddScoped<IAppointmentWorkflowService, AppointmentWorkflowService>();
+builder.Services.AddScoped<IEmployeeCapabilityService, EmployeeCapabilityService>();
+builder.Services.AddScoped<IStaffScheduleService, StaffScheduleService>();
+builder.Services.AddScoped<IStaffLeaveService, StaffLeaveService>();
+builder.Services.AddScoped<IAvailabilityQueryService, AvailabilityQueryService>();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -97,11 +103,17 @@ builder.Services.AddAuthentication(
 
     builder.Services.AddAuthorization();
 
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddDbContext<SalonBookingDbContext>(
-    options =>
-        options.UseSqlServer(connectionString));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<SalonBookingDbContext>(
+        options =>
+            options.UseSqlServer(connectionString));
+}
 //builder.Services.AddDbContext<SalonBookingDbContext>(options =>
 //{
 //    options.UseSqlServer(
@@ -114,6 +126,19 @@ builder.Services.AddDbContext<SalonBookingDbContext>(
 builder.Services.AddOpenApi();
 
 builder.Services.AddControllers();
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("FlutterWeb", policy =>
+        {
+            policy.WithOrigins("http://localhost:8090")
+                .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .WithHeaders("Authorization", "Content-Type", "Accept");
+        });
+    });
+}
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -156,6 +181,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -167,12 +194,21 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("FlutterWeb");
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+public partial class Program
+{
+}
 
 
 

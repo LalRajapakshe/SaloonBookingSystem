@@ -28,7 +28,7 @@ public class EmployeeService : IEmployeeService
                 t.TenantId == tenantId);
 
         if (tenant == null)
-            throw new Exception("Tenant not found.");  
+            throw new KeyNotFoundException();
 
         var branch = await _context.Branches
         .FirstOrDefaultAsync(b =>
@@ -38,7 +38,7 @@ public class EmployeeService : IEmployeeService
 
         if (branch == null)
 
-            throw new Exception("Branch not found.");      
+            throw new KeyNotFoundException();      
 
         if (await MobileExistsAsync(tenantId, request.MobileNo))
         {
@@ -145,13 +145,20 @@ public class EmployeeService : IEmployeeService
 
 public async Task<EmployeeResponse?> GetByIdAsync(long employeeId)
 {
-    var employee = await _context.Employees
-        .FirstOrDefaultAsync(e =>
-            e.TenantId == _currentUserService.TenantId &&
-            e.EmployeeId == employeeId &&
-            e.IsActive);
+    var tenantId = _currentUserService.RequireTenantId();
+    var employee = await _context.Employees.RequireOwnedAsync(
+        _currentUserService,
+        item => item.EmployeeId == employeeId &&
+                item.TenantId == tenantId &&
+                !item.IsDeleted,
+        item => item.BranchId);
 
-    return employee == null ? null : EmployeeResponse.From(employee);
+    if (!employee.IsActive)
+    {
+        return null;
+    }
+
+    return EmployeeResponse.From(employee);
 }
 
 public async Task<EmployeeResponse> UpdateAsync(
@@ -160,22 +167,20 @@ public async Task<EmployeeResponse> UpdateAsync(
        UpdateEmployeeRequest  request)
 {
     var tenantId = _currentUserService.RequireTenantId();
+    var employee = await _context.Employees.RequireOwnedAsync(
+        _currentUserService,
+        item => item.EmployeeId == employeeId &&
+                item.TenantId == tenantId &&
+                !item.IsDeleted,
+        item => item.BranchId);
     var branchId = _currentUserService.ResolveBranchId(request.BranchId);
-
-    var employee = await _context.Employees
-        .FirstOrDefaultAsync(e =>
-            e.EmployeeId == employeeId &&
-            e.TenantId == tenantId);
-
-    if (employee == null)
-        throw new Exception("Employee not found.");
 
            var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t =>
                 t.TenantId == tenantId);  //&& !t.IsDeleted
 
         if (tenant == null)
-            throw new Exception("Tenant not found.");  
+            throw new KeyNotFoundException();
 
         var branch = await _context.Branches
             .FirstOrDefaultAsync(b =>
@@ -184,7 +189,7 @@ public async Task<EmployeeResponse> UpdateAsync(
             b.IsActive);  // && !b.IsDeleted
 
             if (branch == null)
-                throw new Exception("Invalid branch.");    
+                throw new KeyNotFoundException();    
 
         if (await MobileExistsAsync(tenantId, request.MobileNo, employeeId))
         {
@@ -235,11 +240,13 @@ private Task<bool> MobileExistsAsync(
 
 public async Task DeleteAsync(long employeeId)
     {
-        var employee = await _context.Employees
-            .FirstOrDefaultAsync(e => e.EmployeeId == employeeId && e.TenantId == _currentUserService.TenantId);
-
-        if (employee == null)
-            throw new Exception("Employee not found.");
+        var tenantId = _currentUserService.RequireTenantId();
+        var employee = await _context.Employees.RequireOwnedAsync(
+            _currentUserService,
+            item => item.EmployeeId == employeeId &&
+                    item.TenantId == tenantId &&
+                    !item.IsDeleted,
+            item => item.BranchId);
 
         employee.IsActive = false;
         employee.IsDeleted = true;

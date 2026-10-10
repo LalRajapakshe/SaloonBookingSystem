@@ -23,5 +23,7 @@ public class User : TenantEntity
 
     public Branch? Branch { get; set; }
 
+    public Employee? Employee { get; set; }
+
     public string Role { get; set; } = "Admin";
 }

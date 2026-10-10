@@ -30,7 +30,7 @@ public class BranchService : IBranchService
         var tenant = await _context.Tenants
             .FirstOrDefaultAsync(item => item.TenantId == tenantId);
         if (tenant == null)
-            throw new Exception("Tenant not found.");
+            throw new KeyNotFoundException();
 
         var lastBranch = await _context.Branches
         .IgnoreQueryFilters()
@@ -77,7 +77,8 @@ public class BranchService : IBranchService
             PhoneNo = branch.PhoneNo,
             Email = branch.Email,
             ManagerName = branch.ManagerName,
-            IsHeadOffice = branch.IsHeadOffice
+            IsHeadOffice = branch.IsHeadOffice,
+            IsActive = branch.IsActive
         };
     }
 
@@ -145,7 +146,8 @@ public class BranchService : IBranchService
         PhoneNo = c.PhoneNo,
         Email = c.Email,
         ManagerName = c.ManagerName,
-        IsHeadOffice = c.IsHeadOffice
+        IsHeadOffice = c.IsHeadOffice,
+        IsActive = c.IsActive
     }).ToList();
 
     return new PagedResult<BranchResponse>
@@ -160,24 +162,15 @@ public class BranchService : IBranchService
 
     public async Task<BranchResponse?> GetByIdAsync(long id)
     {
+        var tenantId = _currentUserService.RequireTenantId();
+        var branch = await _context.Branches.RequireOwnedAsync(
+            _currentUserService,
+            item => item.BranchId == id &&
+                    item.TenantId == tenantId &&
+                    !item.IsDeleted,
+            item => item.BranchId);
 
-        return await _context.Branches
-        .Where(c => c.BranchId == id)
-        .Select(c => new BranchResponse
-        {
-            TenantId = c.TenantId,
-            BranchId = c.BranchId,
-            BranchCode = c.BranchCode,
-            BranchName = c.BranchName,
-            AddressLine1 = c.AddressLine1,
-            AddressLine2 = c.AddressLine2,
-            City = c.City,
-            PhoneNo = c.PhoneNo,
-            Email = c.Email,
-            ManagerName = c.ManagerName,
-            IsHeadOffice = c.IsHeadOffice
-        })
-        .FirstOrDefaultAsync();
+        return Map(branch);
     }
 
    public async Task<BranchResponse> GetAllAsync(int page, int pageSize)
@@ -197,22 +190,21 @@ public class BranchService : IBranchService
             PhoneNo = c.PhoneNo,
             Email = c.Email,
             ManagerName = c.ManagerName,
-            IsHeadOffice = c.IsHeadOffice
+            IsHeadOffice = c.IsHeadOffice,
+            IsActive = c.IsActive
         })
         .FirstOrDefaultAsync();
     }
 
    public async Task<BranchResponse?> UpdateAsync(long id, UpdateBranchRequest request)
    {
-
         var tenantId = _currentUserService.RequireTenantId();
-        var branch = await _context.Branches
-        .FirstOrDefaultAsync(c =>
-            c.BranchId == id &&
-            c.TenantId == tenantId);
-
-        if (branch == null)
-            throw new Exception("Branch not found.");
+        var branch = await _context.Branches.RequireOwnedAsync(
+            _currentUserService,
+            item => item.BranchId == id &&
+                    item.TenantId == tenantId &&
+                    !item.IsDeleted,
+            item => item.BranchId);
 
         branch.BranchName = request.BranchName;
         branch.AddressLine1 = request.AddressLine1;
@@ -226,7 +218,28 @@ public class BranchService : IBranchService
 
         await _context.SaveChangesAsync();
 
-            return new BranchResponse
+        return Map(branch);
+   }
+
+   public async Task<bool> DeleteAsync(long id)
+   {
+        var tenantId = _currentUserService.RequireTenantId();
+        var branch = await _context.Branches.RequireOwnedAsync(
+            _currentUserService,
+            item => item.BranchId == id &&
+                    item.TenantId == tenantId &&
+                    !item.IsDeleted,
+            item => item.BranchId);
+
+        branch.IsActive = false;
+
+        await _context.SaveChangesAsync();
+        return true;
+   }
+
+    private static BranchResponse Map(Branch branch)
+    {
+        return new BranchResponse
         {
             TenantId = branch.TenantId,
             BranchId = branch.BranchId,
@@ -238,21 +251,8 @@ public class BranchService : IBranchService
             PhoneNo = branch.PhoneNo,
             Email = branch.Email,
             ManagerName = branch.ManagerName,
-            IsHeadOffice = branch.IsHeadOffice
+            IsHeadOffice = branch.IsHeadOffice,
+            IsActive = branch.IsActive
         };
-   }
-
-   public async Task<bool> DeleteAsync(long id)
-   {
-            var branch = await _context.Branches
-            .FirstOrDefaultAsync(c => c.BranchId == id);
-
-        if (branch == null)
-            throw new Exception("Tenant not found.");
-
-        branch.IsActive = false;
-
-        await _context.SaveChangesAsync();
-        return true;
-   }
+    }
 }

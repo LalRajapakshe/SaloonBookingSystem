@@ -48,6 +48,13 @@ public DbSet<Employee> Employees => Set<Employee>();
 
 public DbSet<Service> Services => Set<Service>();
 public DbSet<ServiceCategory> ServiceCategories => Set<ServiceCategory>();
+public DbSet<EmployeeService> EmployeeServices => Set<EmployeeService>();
+public DbSet<Appointment> Appointments => Set<Appointment>();
+public DbSet<AppointmentService> AppointmentServices => Set<AppointmentService>();
+public DbSet<AppointmentStatusHistory> AppointmentStatusHistories => Set<AppointmentStatusHistory>();
+public DbSet<AppointmentServiceScheduleHistory> AppointmentServiceScheduleHistories => Set<AppointmentServiceScheduleHistory>();
+public DbSet<StaffSchedule> StaffSchedules => Set<StaffSchedule>();
+public DbSet<StaffLeave> StaffLeaves => Set<StaffLeave>();
 
     //public DbSet<Branch> Branches { get; set; }
 protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -59,8 +66,21 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
     modelBuilder.ApplyConfiguration(new TenantConfiguration());
     modelBuilder.ApplyConfiguration(new BranchConfiguration());
 
-    modelBuilder.ApplyConfiguration(new ServiceCategoryConfiguration());
-    modelBuilder.ApplyConfiguration(new ServiceConfiguration());
+        modelBuilder.ApplyConfiguration(new ServiceCategoryConfiguration());
+        modelBuilder.ApplyConfiguration(new ServiceConfiguration());
+        modelBuilder.ApplyConfiguration(new EmployeeServiceConfiguration());
+        modelBuilder.ApplyConfiguration(new AppointmentConfiguration());
+        modelBuilder.ApplyConfiguration(new AppointmentServiceConfiguration());
+        modelBuilder.ApplyConfiguration(new AppointmentStatusHistoryConfiguration());
+        modelBuilder.ApplyConfiguration(new AppointmentServiceScheduleHistoryConfiguration());
+        modelBuilder.ApplyConfiguration(new StaffScheduleConfiguration());
+        modelBuilder.ApplyConfiguration(new StaffLeaveConfiguration());
+
+        var rowVersion = modelBuilder.Entity<AppointmentService>().Property(x => x.RowVersion);
+        if (Database.IsSqlServer())
+        {
+            rowVersion.IsRowVersion();
+        }
 
     modelBuilder.Entity<Customer>()
         .HasQueryFilter(x =>
@@ -106,6 +126,48 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
         .HasQueryFilter(x =>
             !x.IsDeleted &&
             x.TenantId == _tenantId);
+
+    modelBuilder.Entity<EmployeeService>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<Appointment>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<AppointmentService>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<AppointmentStatusHistory>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<AppointmentServiceScheduleHistory>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<StaffSchedule>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<StaffLeave>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
 }
 
 public override async Task<int> SaveChangesAsync(

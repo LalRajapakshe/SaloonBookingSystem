@@ -50,6 +50,15 @@ public class EmployeeConfiguration
             })
             .IsUnique();
 
+        builder.HasIndex(x => x.UserId)
+            .IsUnique()
+            .HasFilter("[UserId] IS NOT NULL");
+
+        builder.HasOne(x => x.User)
+            .WithOne(x => x.Employee)
+            .HasForeignKey<Employee>(x => x.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
    builder.HasOne(c => c.Tenant)
     .WithMany()
     .HasForeignKey(c => c.TenantId)

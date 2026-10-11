@@ -30,6 +30,9 @@ public class CustomerConfiguration
         builder.Property(x => x.Email)
             .HasMaxLength(200);
 
+        builder.Property(x => x.PhotoPath)
+            .HasMaxLength(80);
+
         builder.HasIndex(x =>
             new
             {

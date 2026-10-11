@@ -52,6 +52,10 @@ public sealed class AddAppointmentServiceRequest
     public long ServiceId { get; set; }
 
     public string? Notes { get; set; }
+
+    public DateTime? PreferredStartTime { get; set; }
+
+    public DateTime? PreferredEndTime { get; set; }
 }
 
 public sealed class UpdateAppointmentServiceRequest
@@ -120,6 +124,10 @@ public sealed class AppointmentServiceResponse
     public DateTime? StartTime { get; set; }
 
     public DateTime? EndTime { get; set; }
+
+    public DateTime? PreferredStartTime { get; set; }
+
+    public DateTime? PreferredEndTime { get; set; }
 
     public int DurationMinutes { get; set; }
 

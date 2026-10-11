@@ -41,3 +41,6 @@ publish/
 # Temporary
 tmp/
 temp/
+
+# Customer photos stay on the server. Do not commit them.
+App_Data/

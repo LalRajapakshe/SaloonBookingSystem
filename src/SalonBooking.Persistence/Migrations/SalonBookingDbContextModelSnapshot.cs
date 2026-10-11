@@ -138,6 +138,12 @@ namespace SalonBooking.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<DateTime?>("PreferredEndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PreferredStartTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -175,6 +181,7 @@ namespace SalonBooking.Persistence.Migrations
                     b.ToTable("AppointmentServices", t =>
                         {
                             t.HasCheckConstraint("CK_AppointmentService_ScheduleShape", "([StartTime] IS NULL AND [EndTime] IS NULL) OR ([EmployeeId] IS NOT NULL AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [EndTime] > [StartTime])");
+                            t.HasCheckConstraint("CK_AppointmentService_PreferredShape", "([PreferredStartTime] IS NULL AND [PreferredEndTime] IS NULL) OR ([PreferredStartTime] IS NOT NULL AND [PreferredEndTime] IS NOT NULL AND [PreferredEndTime] > [PreferredStartTime])");
                         });
                 });
 
@@ -455,6 +462,10 @@ namespace SalonBooking.Persistence.Migrations
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");

@@ -55,6 +55,9 @@ builder.Services.AddScoped<IJwtTokenService,    JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();    
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.Configure<SalonBooking.Infrastructure.Storage.CustomerPhotoOptions>(
+    builder.Configuration.GetSection(SalonBooking.Infrastructure.Storage.CustomerPhotoOptions.SectionName));
+builder.Services.AddScoped<ICustomerPhotoService, SalonBooking.Infrastructure.Storage.CustomerPhotoService>();
 builder.Services.AddScoped<ItenantService, TenantService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 

@@ -15,10 +15,14 @@ public class CustomersController
     private readonly ICustomerService
         _customerService;
 
+    private readonly ICustomerPhotoService _photos;
+
     public CustomersController(
-        ICustomerService customerService)
+        ICustomerService customerService,
+        ICustomerPhotoService photos)
     {
         _customerService = customerService;
+        _photos = photos;
     }
 
     [HttpPost]
@@ -77,5 +81,41 @@ public class CustomersController
         await _customerService.DeleteAsync(id);
 
         return NoContent();
+    }
+
+    [HttpPost("{id:long}/photo")]
+    [RequestSizeLimit(5_242_880)]
+    public async Task<IActionResult> SavePhoto(
+        long id,
+        IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { title = "A photo file is required." });
+        }
+
+        await using var buffer = new MemoryStream();
+        await file.CopyToAsync(buffer, cancellationToken);
+        var customer = await _photos.SaveAsync(id, buffer.ToArray(), cancellationToken);
+        return Ok(customer);
+    }
+
+    [HttpGet("{id:long}/photo")]
+    public async Task<IActionResult> GetPhoto(long id, CancellationToken cancellationToken)
+    {
+        var photo = await _photos.OpenAsync(id, cancellationToken);
+        if (photo == null)
+        {
+            return NotFound(new { title = "Not Found" });
+        }
+
+        return File(photo.Content, photo.ContentType);
+    }
+
+    [HttpDelete("{id:long}/photo")]
+    public async Task<IActionResult> RemovePhoto(long id, CancellationToken cancellationToken)
+    {
+        return Ok(await _photos.RemoveAsync(id, cancellationToken));
     }
 }

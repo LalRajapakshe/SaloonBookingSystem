@@ -23,7 +23,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public const string InactiveUserName = "inactive.a";
 
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
+    private readonly string _photoRoot;
     private bool _seeded;
+
+    public string PhotoRoot => _photoRoot;
 
     public long TenantAId { get; private set; }
     public long TenantBId { get; private set; }
@@ -58,6 +61,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("JwtSettings__Issuer", "SalonBooking");
         Environment.SetEnvironmentVariable("JwtSettings__Audience", "SalonBookingClient");
         Environment.SetEnvironmentVariable("JwtSettings__ExpiryMinutes", "60");
+        _photoRoot = Path.Combine(Path.GetTempPath(), "salon-customer-photos", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_photoRoot);
+        Environment.SetEnvironmentVariable("CustomerPhotos__StoragePath", _photoRoot);
+        Environment.SetEnvironmentVariable("CustomerPhotos__MaxBytes", "2048");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -73,7 +80,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
                     "test-signing-key-0123456789-test-signing-key",
                 ["JwtSettings:Issuer"] = "SalonBooking",
                 ["JwtSettings:Audience"] = "SalonBookingClient",
-                ["JwtSettings:ExpiryMinutes"] = "60"
+                ["JwtSettings:ExpiryMinutes"] = "60",
+                ["CustomerPhotos:StoragePath"] = _photoRoot,
+                ["CustomerPhotos:MaxBytes"] = "2048"
             });
         });
 
@@ -138,6 +147,16 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         if (disposing)
         {
             _connection.Dispose();
+            try
+            {
+                if (Directory.Exists(_photoRoot))
+                {
+                    Directory.Delete(_photoRoot, recursive: true);
+                }
+            }
+            catch (IOException)
+            {
+            }
         }
     }
 

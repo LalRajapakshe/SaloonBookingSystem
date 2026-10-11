@@ -18,6 +18,11 @@ public class AppointmentService : TenantEntity
 
     public DateTime? EndTime { get; set; }
 
+    /// Customer request only. These are not the scheduled start and finish.
+    public DateTime? PreferredStartTime { get; set; }
+
+    public DateTime? PreferredEndTime { get; set; }
+
     public int DurationMinutes { get; set; }
 
     public decimal UnitPrice { get; set; }

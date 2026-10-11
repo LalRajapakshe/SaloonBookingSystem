@@ -26,6 +26,8 @@ public sealed class ApiExceptionHandler : IExceptionHandler
                 => (StatusCodes.Status409Conflict, "The record was changed by someone else. Reload it and try again."),
             SchedulingException scheduling
                 => (StatusCodes.Status400BadRequest, scheduling.Message),
+            CustomerPhotoException photo
+                => (StatusCodes.Status400BadRequest, photo.Message),
             _ => (0, string.Empty)
         };
 

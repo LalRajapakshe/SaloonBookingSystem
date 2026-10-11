@@ -30,6 +30,8 @@ public class CustomerResponse
 
     public long BranchId { get; set; }
 
+    public string? PhotoPath { get; set; }
+
     public static CustomerResponse From(SalonBooking.Domain.Entities.Customer customer)
     {
         return new CustomerResponse
@@ -47,7 +49,8 @@ public class CustomerResponse
             IsActive = customer.IsActive,
             CreatedDate = customer.CreatedDate,
             TenantId = customer.TenantId,
-            BranchId = customer.BranchId
+            BranchId = customer.BranchId,
+            PhotoPath = customer.PhotoPath
         };
     }
 }

@@ -232,8 +232,11 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
             DurationMinutes = service.DurationMinutes,
             UnitPrice = service.Price,
             Sequence = lines.Count == 0 ? 1 : lines.Max(item => item.Sequence) + 1,
-            Notes = request.Notes
+            Notes = request.Notes,
+            PreferredStartTime = request.PreferredStartTime,
+            PreferredEndTime = request.PreferredEndTime
         };
+        ValidatePreferredTimes(appointment.AppointmentDate, line.PreferredStartTime, line.PreferredEndTime);
         PrepareInsertedRowVersion(line);
         _context.AppointmentServices.Add(line);
         await _context.SaveChangesAsync(cancellationToken);
@@ -578,6 +581,30 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
         };
     }
 
+    private static void ValidatePreferredTimes(DateOnly appointmentDate, DateTime? start, DateTime? end)
+    {
+        if (start is null && end is null)
+        {
+            return;
+        }
+
+        if (start is null || end is null)
+        {
+            throw new SchedulingException("Enter both preferred start and preferred finish.");
+        }
+
+        if (end <= start)
+        {
+            throw new SchedulingException("Preferred finish must be after preferred start.");
+        }
+
+        if (DateOnly.FromDateTime(start.Value) != appointmentDate ||
+            DateOnly.FromDateTime(end.Value) != appointmentDate)
+        {
+            throw new SchedulingException("The preferred time must be on the appointment date.");
+        }
+    }
+
     private static AppointmentServiceResponse MapLine(
         AppointmentService line,
         IEnumerable<AppointmentServiceScheduleHistory> history)
@@ -591,6 +618,8 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
             EmployeeId = line.EmployeeId,
             StartTime = line.StartTime,
             EndTime = line.EndTime,
+            PreferredStartTime = line.PreferredStartTime,
+            PreferredEndTime = line.PreferredEndTime,
             DurationMinutes = line.DurationMinutes,
             UnitPrice = line.UnitPrice,
             Sequence = line.Sequence,

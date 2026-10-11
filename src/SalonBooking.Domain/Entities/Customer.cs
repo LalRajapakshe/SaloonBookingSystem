@@ -24,6 +24,8 @@ public class Customer : TenantEntity
 
     public string? Remarks { get; set; }
 
+    public string? PhotoPath { get; set; }
+
     //public bool IsActive { get; set; } = true;
 
     //public DateTime CreatedDate { get; set; } = DateTime.UtcNow;

@@ -30,6 +30,9 @@ public class AppointmentServiceConfiguration : IEntityTypeConfiguration<Appointm
             table.HasCheckConstraint(
                 "CK_AppointmentService_ScheduleShape",
                 "([StartTime] IS NULL AND [EndTime] IS NULL) OR ([EmployeeId] IS NOT NULL AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [EndTime] > [StartTime])");
+            table.HasCheckConstraint(
+                "CK_AppointmentService_PreferredShape",
+                "([PreferredStartTime] IS NULL AND [PreferredEndTime] IS NULL) OR ([PreferredStartTime] IS NOT NULL AND [PreferredEndTime] IS NOT NULL AND [PreferredEndTime] > [PreferredStartTime])");
         });
 
         builder.HasOne(x => x.Appointment)

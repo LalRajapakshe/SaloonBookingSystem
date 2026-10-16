@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Features.Branch.DTOs;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -19,6 +21,7 @@ public class BranchController : ControllerBase
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.BranchesManage)]
     public async Task<IActionResult> Create(CreateBranchRequest request)
     {
         var result = await _branchService.CreateAsync(request);
@@ -26,6 +29,7 @@ public class BranchController : ControllerBase
         return Ok(result);
     }
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.BranchesRead)]
     public async Task<IActionResult> GetBranch(
         [FromQuery] BranchQueryRequest request)
     {
@@ -35,6 +39,7 @@ public class BranchController : ControllerBase
     }
 
         [HttpGet("{id:long}")]
+    [RequiresPermission(PermissionCatalog.BranchesRead)]
     public async Task<IActionResult> GetById(long id)
     {
         var tenant = await _branchService.GetByIdAsync(id);
@@ -46,6 +51,7 @@ public class BranchController : ControllerBase
     }
 
      [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.BranchesManage)]
     public async Task<IActionResult> Update(
         long id,
         UpdateBranchRequest request)
@@ -60,6 +66,7 @@ public class BranchController : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.BranchesManage)]
     public async Task<IActionResult> Delete(long id)
     {
         await _branchService.DeleteAsync(id);

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Features.Service.DTOs;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -22,6 +24,7 @@ public class ServicesController
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.ServicesManage)]
     public async Task<IActionResult> Create(CreateServiceRequest request)
     {
         var service = await _serviceService.CreateAsync(request);
@@ -38,6 +41,7 @@ public class ServicesController
  //   }
 
     [HttpGet("{id:long}")]
+    [RequiresPermission(PermissionCatalog.ServicesRead)]
     public async Task<IActionResult> GetById(long id)
     {
         var service = await _serviceService.GetByIdAsync(id);
@@ -49,6 +53,7 @@ public class ServicesController
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.ServicesRead)]
     public async Task<IActionResult> GetServices(
         [FromQuery] ServiceQueryRequest request)
     {
@@ -58,6 +63,7 @@ public class ServicesController
     }
 
     [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.ServicesManage)]
     public async Task<IActionResult> Update(
         long id,
         UpdateServiceRequest request)
@@ -72,6 +78,7 @@ public class ServicesController
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.ServicesManage)]
     public async Task<IActionResult> Delete(long id)
     {
         await _serviceService.DeleteAsync(id);

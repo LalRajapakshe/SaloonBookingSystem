@@ -1,3 +1,5 @@
+using SalonBooking.Domain.Enums;
+
 namespace SalonBooking.Application.Interfaces;
 
 public interface ICurrentUserService
@@ -13,4 +15,10 @@ public interface ICurrentUserService
     string? Username { get; }
 
     string? Role { get; }
+
+    UserCategory? UserCategory { get; }
+
+    long? EmployeeId { get; }
+
+    long? CustomerId { get; }
 }

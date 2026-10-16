@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Features.Customer.DTOs;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -26,6 +28,7 @@ public class CustomersController
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.CustomersManage)]
     public async Task<IActionResult> Create(CreateCustomerRequest request)
     {
         var customer = await _customerService.CreateAsync(request);
@@ -42,6 +45,7 @@ public class CustomersController
  //   }
 
     [HttpGet("{id:long}")]
+    [RequiresPermission(PermissionCatalog.CustomersRead)]
     public async Task<IActionResult> GetById(long id)
     {
         var customer = await _customerService.GetByIdAsync(id);
@@ -53,6 +57,7 @@ public class CustomersController
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.CustomersRead)]
     public async Task<IActionResult> GetCustomers(
         [FromQuery] CustomerQueryRequest request)
     {
@@ -62,6 +67,7 @@ public class CustomersController
     }
 
     [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.CustomersManage)]
     public async Task<IActionResult> Update(
         long id,
         UpdateCustomerRequest request)
@@ -76,6 +82,7 @@ public class CustomersController
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.CustomersManage)]
     public async Task<IActionResult> Delete(long id)
     {
         await _customerService.DeleteAsync(id);
@@ -84,6 +91,7 @@ public class CustomersController
     }
 
     [HttpPost("{id:long}/photo")]
+    [RequiresPermission(PermissionCatalog.CustomersManage)]
     [RequestSizeLimit(5_242_880)]
     public async Task<IActionResult> SavePhoto(
         long id,
@@ -102,6 +110,7 @@ public class CustomersController
     }
 
     [HttpGet("{id:long}/photo")]
+    [RequiresPermission(PermissionCatalog.CustomersRead)]
     public async Task<IActionResult> GetPhoto(long id, CancellationToken cancellationToken)
     {
         var photo = await _photos.OpenAsync(id, cancellationToken);
@@ -114,6 +123,7 @@ public class CustomersController
     }
 
     [HttpDelete("{id:long}/photo")]
+    [RequiresPermission(PermissionCatalog.CustomersManage)]
     public async Task<IActionResult> RemovePhoto(long id, CancellationToken cancellationToken)
     {
         return Ok(await _photos.RemoveAsync(id, cancellationToken));

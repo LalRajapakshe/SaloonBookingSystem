@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Features.Scheduling;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -18,30 +20,35 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.AppointmentsRead)]
     public async Task<IActionResult> Get([FromQuery] AppointmentQueryRequest request, CancellationToken cancellationToken)
     {
         return Ok(await _appointments.GetAppointmentsAsync(request, cancellationToken));
     }
 
     [HttpGet("{id:long}")]
+    [RequiresPermission(PermissionCatalog.AppointmentsRead)]
     public async Task<IActionResult> GetById(long id, CancellationToken cancellationToken)
     {
         return Ok(await _appointments.GetAppointmentAsync(id, cancellationToken));
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
     public async Task<IActionResult> Create(CreateAppointmentRequest request, CancellationToken cancellationToken)
     {
         return Ok(await _appointments.CreateAppointmentAsync(request, cancellationToken));
     }
 
     [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
     public async Task<IActionResult> Update(long id, UpdateAppointmentRequest request, CancellationToken cancellationToken)
     {
         return Ok(await _appointments.UpdateAppointmentAsync(id, request, cancellationToken));
     }
 
     [HttpPost("{id:long}/status")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
     public async Task<IActionResult> ChangeStatus(
         long id,
         ChangeAppointmentStatusRequest request,
@@ -51,6 +58,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost("{id:long}/cancel")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
     public async Task<IActionResult> Cancel(
         long id,
         CancelAppointmentRequest request,
@@ -60,6 +68,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost("{appointmentId:long}/services")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
     public async Task<IActionResult> AddService(
         long appointmentId,
         AddAppointmentServiceRequest request,
@@ -69,6 +78,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{appointmentId:long}/services/{appointmentServiceId:long}")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
     public async Task<IActionResult> UpdateService(
         long appointmentId,
         long appointmentServiceId,
@@ -80,6 +90,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpDelete("{appointmentId:long}/services/{appointmentServiceId:long}")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
     public async Task<IActionResult> CancelService(
         long appointmentId,
         long appointmentServiceId,
@@ -91,6 +102,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost("{appointmentId:long}/services/{appointmentServiceId:long}/schedule")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
     public async Task<IActionResult> Schedule(
         long appointmentId,
         long appointmentServiceId,

@@ -12,4 +12,6 @@ public class LoginResponse
 
     public string FullName { get; set; }
         = string.Empty;
+
+    public CurrentUserResponse Profile { get; set; } = new();
 }

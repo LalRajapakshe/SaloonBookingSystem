@@ -486,5 +486,8 @@ public class SchedulingLogicTests
         public long? BranchId { get; }
         public string? Username => "scheduler";
         public string? Role => "Admin";
+        public UserCategory? UserCategory => SalonBooking.Domain.Enums.UserCategory.General;
+        public long? EmployeeId => null;
+        public long? CustomerId => null;
     }
 }

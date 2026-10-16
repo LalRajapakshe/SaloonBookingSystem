@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Domain.Enums;
 
 namespace SalonBooking.Infrastructure.Authentication;
 
@@ -32,6 +33,16 @@ public class CurrentUserService : ICurrentUserService
     public string? Role =>
         TryGet(ClaimTypes.Role)
         ?? TryGet("role");
+
+    public UserCategory? UserCategory =>
+        Enum.TryParse<UserCategory>(TryGet("UserCategory"), ignoreCase: true, out var category) &&
+        Enum.IsDefined(category)
+            ? category
+            : null;
+
+    public long? EmployeeId => TryGetInt64("EmployeeId");
+
+    public long? CustomerId => TryGetInt64("CustomerId");
 
     private string? TryGet(string claimType)
     {

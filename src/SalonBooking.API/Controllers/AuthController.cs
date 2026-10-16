@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using SalonBooking.Application.Features.Authentication.DTOs;
@@ -18,22 +19,20 @@ public class AuthController : ControllerBase
     {
         _authenticationService =
             authenticationService;
-    }    
-[HttpPost("login")]
-public async Task<IActionResult> Login(
-    LoginRequest request)
-{
-    try
-    {
-        var response =
-            await _authenticationService
-                .LoginAsync(request);
+    }
 
+    [AllowAnonymous]
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginRequest request)
+    {
+        var response = await _authenticationService.LoginAsync(request);
         return Ok(response);
     }
-    catch (UnauthorizedAccessException)
+
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> Me(CancellationToken cancellationToken)
     {
-        return Unauthorized();
+        return Ok(await _authenticationService.GetCurrentAsync(cancellationToken));
     }
-}
 }

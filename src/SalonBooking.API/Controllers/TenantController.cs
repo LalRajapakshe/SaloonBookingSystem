@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Features.Tenant.DTOs;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -21,6 +23,7 @@ public class TenantController : ControllerBase
     // Tenant provisioning stays closed until a platform administrator
     // exists outside this tenant-scoped API.
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.TenantsManage)]
     public async Task<IActionResult> Create(CreateTenantRequest request)
     {
         var result = await _tenantService.CreateAsync(request);
@@ -28,6 +31,7 @@ public class TenantController : ControllerBase
         return Ok(result);
     }
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.TenantsRead)]
     public async Task<IActionResult> GetTenants(
         [FromQuery] TenantQueryRequest request)
     {
@@ -37,6 +41,7 @@ public class TenantController : ControllerBase
     }
 
         [HttpGet("{id:long}")]
+    [RequiresPermission(PermissionCatalog.TenantsRead)]
     public async Task<IActionResult> GetById(long id)
     {
         var tenant = await _tenantService.GetByIdAsync(id);
@@ -48,6 +53,7 @@ public class TenantController : ControllerBase
     }
 
      [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.TenantsManage)]
     public async Task<IActionResult> Update(
         long id,
         UpdateTenantRequest request)
@@ -62,6 +68,7 @@ public class TenantController : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.TenantsManage)]
     public async Task<IActionResult> Delete(long id)
     {
         await _tenantService.DeleteAsync(id);

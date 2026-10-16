@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Features.Employee.DTOs;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -22,6 +24,7 @@ public class EmployeesController
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.EmployeesManage)]
     public async Task<IActionResult> Create(CreateEmployeeRequest request)
     {
         var employee = await _employeeService.CreateAsync(request);
@@ -38,6 +41,7 @@ public class EmployeesController
  //   }
 
     [HttpGet("{id:long}")]
+    [RequiresPermission(PermissionCatalog.EmployeesRead)]
     public async Task<IActionResult> GetById(long id)
     {
         var employee = await _employeeService.GetByIdAsync(id);
@@ -49,6 +53,7 @@ public class EmployeesController
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.EmployeesRead)]
     public async Task<IActionResult> GetEmployees(
         [FromQuery] EmployeeQueryRequest request)
     {
@@ -58,6 +63,7 @@ public class EmployeesController
     }
 
     [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.EmployeesManage)]
     public async Task<IActionResult> Update(
         long id,
         UpdateEmployeeRequest request)
@@ -72,6 +78,7 @@ public class EmployeesController
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.EmployeesManage)]
     public async Task<IActionResult> Delete(long id)
     {
         await _employeeService.DeleteAsync(id);

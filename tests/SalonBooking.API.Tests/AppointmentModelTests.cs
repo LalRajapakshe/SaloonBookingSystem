@@ -113,14 +113,24 @@ public class AppointmentModelTests : IDisposable
 
         var second = NewEmployee("EMP002", _graph.BranchId);
         var third = NewEmployee("EMP003", _graph.BranchId);
-        third.UserId = linkedUser.UserId;
         _db.Employees.AddRange(second, third);
         await _db.SaveChangesAsync();
 
-        _db.ChangeTracker.Clear();
-        var fourth = NewEmployee("EMP004", _graph.BranchId);
-        fourth.UserId = linkedUser.UserId;
-        _db.Employees.Add(fourth);
+        linkedUser.UserCategory = UserCategory.Employee;
+        linkedUser.EmployeeId = third.EmployeeId;
+        await _db.SaveChangesAsync();
+
+        var other = new User
+        {
+            TenantId = 1,
+            Username = "other-link",
+            PasswordHash = "hash",
+            FirstName = "Other",
+            LastName = "User",
+            UserCategory = UserCategory.Employee,
+            EmployeeId = third.EmployeeId
+        };
+        _db.Users.Add(other);
 
         await Assert.ThrowsAsync<DbUpdateException>(() => _db.SaveChangesAsync());
     }
@@ -230,7 +240,6 @@ public class AppointmentModelTests : IDisposable
             MobileNo = "0770000000"
         };
         var employee = NewEmployee("EMP001", branch.BranchId);
-        employee.UserId = user.UserId;
         var service = new Service
         {
             TenantId = tenant.TenantId,
@@ -314,5 +323,8 @@ public class AppointmentModelTests : IDisposable
         public long? BranchId => null;
         public string? Username => "model-test";
         public string? Role => "Admin";
+        public UserCategory? UserCategory => Domain.Enums.UserCategory.General;
+        public long? EmployeeId => null;
+        public long? CustomerId => null;
     }
 }

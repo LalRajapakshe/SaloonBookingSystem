@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Features.Scheduling;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -18,6 +20,7 @@ public class EmployeeCapabilitiesController : ControllerBase
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.EmployeesRead)]
     public async Task<IActionResult> Get(
         [FromQuery] EmployeeCapabilityQueryRequest request,
         CancellationToken cancellationToken)
@@ -26,6 +29,7 @@ public class EmployeeCapabilitiesController : ControllerBase
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.EmployeesManage)]
     public async Task<IActionResult> Assign(
         AssignEmployeeCapabilityRequest request,
         CancellationToken cancellationToken)
@@ -34,6 +38,7 @@ public class EmployeeCapabilitiesController : ControllerBase
     }
 
     [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.EmployeesManage)]
     public async Task<IActionResult> Update(
         long id,
         UpdateEmployeeCapabilityRequest request,
@@ -43,6 +48,7 @@ public class EmployeeCapabilitiesController : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.EmployeesManage)]
     public async Task<IActionResult> Remove(long id, CancellationToken cancellationToken)
     {
         await _capabilities.RemoveAsync(id, cancellationToken);

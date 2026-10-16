@@ -42,16 +42,22 @@ public class JwtTokenService : IJwtTokenService
                 user.BranchId.Value.ToString()));
         }
 
+        claims.Add(new Claim("UserCategory", user.UserCategory.ToString()));
+
+        if (user.EmployeeId is > 0)
+        {
+            claims.Add(new Claim("EmployeeId", user.EmployeeId.Value.ToString()));
+        }
+
+        if (user.CustomerId is > 0)
+        {
+            claims.Add(new Claim("CustomerId", user.CustomerId.Value.ToString()));
+        }
+
         var roleNames = roles
             .Where(role => !string.IsNullOrWhiteSpace(role))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        if (roleNames.Count == 0 &&
-            !string.IsNullOrWhiteSpace(user.Role))
-        {
-            roleNames.Add(user.Role);
-        }
 
         foreach (var role in roleNames)
         {

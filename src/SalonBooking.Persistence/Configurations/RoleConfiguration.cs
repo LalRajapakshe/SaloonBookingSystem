@@ -9,7 +9,7 @@ public class RoleConfiguration :
 {
     public void Configure(EntityTypeBuilder<Role> builder)
     {
-        builder.ToTable("Role");
+        builder.ToTable("Roles");
 
         builder.HasKey(x => x.RoleId);
 
@@ -21,8 +21,13 @@ public class RoleConfiguration :
             .HasMaxLength(100)
             .IsRequired();
 
+        builder.Property(x => x.Description)
+            .HasMaxLength(300);
+
         builder.HasIndex(x =>
             new { x.TenantId, x.RoleCode })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0")
+            .HasDatabaseName("IX_Roles_Tenant_RoleCode");
     }
 }

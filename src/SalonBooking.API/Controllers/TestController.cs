@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SalonBooking.API.Authorization;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -10,6 +12,7 @@ public class TestController
     : ControllerBase
 {
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.UsersRead)]
     public IActionResult Get()
     {
         return Ok(

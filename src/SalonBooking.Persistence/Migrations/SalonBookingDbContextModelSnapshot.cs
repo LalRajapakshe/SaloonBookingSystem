@@ -180,8 +180,9 @@ namespace SalonBooking.Persistence.Migrations
 
                     b.ToTable("AppointmentServices", t =>
                         {
-                            t.HasCheckConstraint("CK_AppointmentService_ScheduleShape", "([StartTime] IS NULL AND [EndTime] IS NULL) OR ([EmployeeId] IS NOT NULL AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [EndTime] > [StartTime])");
                             t.HasCheckConstraint("CK_AppointmentService_PreferredShape", "([PreferredStartTime] IS NULL AND [PreferredEndTime] IS NULL) OR ([PreferredStartTime] IS NOT NULL AND [PreferredEndTime] IS NOT NULL AND [PreferredEndTime] > [PreferredStartTime])");
+
+                            t.HasCheckConstraint("CK_AppointmentService_ScheduleShape", "([StartTime] IS NULL AND [EndTime] IS NULL) OR ([EmployeeId] IS NOT NULL AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [EndTime] > [StartTime])");
                         });
                 });
 
@@ -561,16 +562,9 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<long>("TenantId")
                         .HasColumnType("bigint");
 
-                    b.Property<long?>("UserId")
-                        .HasColumnType("bigint");
-
                     b.HasKey("EmployeeId");
 
                     b.HasIndex("BranchId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique()
-                        .HasFilter("[UserId] IS NOT NULL");
 
                     b.HasIndex("TenantId", "EmployeeCode")
                         .IsUnique();
@@ -647,7 +641,8 @@ namespace SalonBooking.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -663,15 +658,22 @@ namespace SalonBooking.Persistence.Migrations
 
                     b.Property<string>("PermissionCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<string>("PermissionName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.HasKey("PermissionId");
 
-                    b.ToTable("Permissions");
+                    b.HasIndex("PermissionCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Permissions_PermissionCode")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("Permissions", (string)null);
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Role", b =>
@@ -689,7 +691,8 @@ namespace SalonBooking.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -705,18 +708,25 @@ namespace SalonBooking.Persistence.Migrations
 
                     b.Property<string>("RoleCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("RoleName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<long>("TenantId")
                         .HasColumnType("bigint");
 
                     b.HasKey("RoleId");
 
-                    b.ToTable("Roles");
+                    b.HasIndex("TenantId", "RoleCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Roles_Tenant_RoleCode")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.RolePermission", b =>
@@ -737,9 +747,11 @@ namespace SalonBooking.Persistence.Migrations
 
                     b.HasIndex("PermissionId");
 
-                    b.HasIndex("RoleId");
+                    b.HasIndex("RoleId", "PermissionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RolePermissions_Role_Permission");
 
-                    b.ToTable("RolePermissions");
+                    b.ToTable("RolePermissions", (string)null);
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Service", b =>
@@ -1115,8 +1127,14 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<long?>("CustomerId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("EmployeeId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -1155,15 +1173,39 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<long>("TenantId")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("UserCategory")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("UserId");
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("Users");
+                    b.HasIndex("CustomerId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_CustomerId")
+                        .HasFilter("[CustomerId] IS NOT NULL");
+
+                    b.HasIndex("EmployeeId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_EmployeeId")
+                        .HasFilter("[EmployeeId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Username")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_Tenant_Username")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("Users", t =>
+                        {
+                            t.HasCheckConstraint("CK_Users_CategoryLinks", "([UserCategory] = 1 AND [EmployeeId] IS NULL AND [CustomerId] IS NULL) OR ([UserCategory] = 2 AND [EmployeeId] IS NOT NULL AND [CustomerId] IS NULL) OR ([UserCategory] = 3 AND [EmployeeId] IS NULL AND [CustomerId] IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.UserRole", b =>
@@ -1184,9 +1226,11 @@ namespace SalonBooking.Persistence.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "RoleId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserRoles_User_Role");
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Appointment", b =>
@@ -1359,16 +1403,9 @@ namespace SalonBooking.Persistence.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("SalonBooking.Domain.Entities.User", "User")
-                        .WithOne("Employee")
-                        .HasForeignKey("SalonBooking.Domain.Entities.Employee", "UserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
                     b.Navigation("Branch");
 
                     b.Navigation("Tenant");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.EmployeeService", b =>
@@ -1403,13 +1440,13 @@ namespace SalonBooking.Persistence.Migrations
                     b.HasOne("SalonBooking.Domain.Entities.Permission", "Permission")
                         .WithMany()
                         .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SalonBooking.Domain.Entities.Role", "Role")
                         .WithMany("RolePermissions")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Permission");
@@ -1478,9 +1515,24 @@ namespace SalonBooking.Persistence.Migrations
                 {
                     b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
                         .WithMany()
-                        .HasForeignKey("BranchId");
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("SalonBooking.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("SalonBooking.Domain.Entities.Employee", "Employee")
+                        .WithOne("User")
+                        .HasForeignKey("SalonBooking.Domain.Entities.User", "EmployeeId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("Branch");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.UserRole", b =>
@@ -1488,13 +1540,13 @@ namespace SalonBooking.Persistence.Migrations
                     b.HasOne("SalonBooking.Domain.Entities.Role", "Role")
                         .WithMany("UserRoles")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("SalonBooking.Domain.Entities.User", "User")
-                        .WithMany()
+                        .WithMany("UserRoles")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Role");
@@ -1512,6 +1564,11 @@ namespace SalonBooking.Persistence.Migrations
             modelBuilder.Entity("SalonBooking.Domain.Entities.AppointmentService", b =>
                 {
                     b.Navigation("ScheduleHistory");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.Employee", b =>
+                {
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Role", b =>
@@ -1533,7 +1590,7 @@ namespace SalonBooking.Persistence.Migrations
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.User", b =>
                 {
-                    b.Navigation("Employee");
+                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }

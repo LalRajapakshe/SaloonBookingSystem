@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Features.Scheduling;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -18,6 +20,7 @@ public class AvailabilityController : ControllerBase
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.AvailabilityRead)]
     public async Task<IActionResult> Get(
         [FromQuery] AvailabilityQueryRequest request,
         CancellationToken cancellationToken)

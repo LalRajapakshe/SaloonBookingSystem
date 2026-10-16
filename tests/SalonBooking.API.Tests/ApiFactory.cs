@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SalonBooking.Domain.Entities;
 using SalonBooking.Domain.Enums;
+using SalonBooking.Infrastructure.Authentication;
 using SalonBooking.Persistence.Context;
 
 namespace SalonBooking.API.Tests;
@@ -190,6 +191,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         await database.SaveChangesAsync();
         inactiveUser.IsActive = false;
         await database.SaveChangesAsync();
+        await AccessControlBootstrap.AssignLegacyRoleAsync(database, branchUserA);
+        await AccessControlBootstrap.AssignLegacyRoleAsync(database, tenantUserA);
+        await AccessControlBootstrap.AssignLegacyRoleAsync(database, branchUserB);
+        await AccessControlBootstrap.AssignLegacyRoleAsync(database, inactiveUser);
 
         var categoryA = NewCategory(tenantA.TenantId, "CAT-A", "Hair A");
         var categoryB = NewCategory(tenantB.TenantId, "CAT-B", "Hair B");

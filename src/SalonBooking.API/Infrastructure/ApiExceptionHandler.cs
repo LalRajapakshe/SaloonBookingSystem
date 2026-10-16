@@ -24,6 +24,8 @@ public sealed class ApiExceptionHandler : IExceptionHandler
                 => (StatusCodes.Status409Conflict, conflict.Message),
             DbUpdateConcurrencyException
                 => (StatusCodes.Status409Conflict, "The record was changed by someone else. Reload it and try again."),
+            IdentityException identity
+                => (StatusCodes.Status400BadRequest, identity.Message),
             SchedulingException scheduling
                 => (StatusCodes.Status400BadRequest, scheduling.Message),
             CustomerPhotoException photo

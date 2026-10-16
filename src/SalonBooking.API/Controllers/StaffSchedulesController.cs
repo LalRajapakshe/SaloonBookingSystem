@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Features.Scheduling;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -18,6 +20,7 @@ public class StaffSchedulesController : ControllerBase
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.SchedulesRead)]
     public async Task<IActionResult> Get(
         [FromQuery] StaffScheduleQueryRequest request,
         CancellationToken cancellationToken)
@@ -26,6 +29,7 @@ public class StaffSchedulesController : ControllerBase
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.SchedulesManage)]
     public async Task<IActionResult> Create(
         SaveStaffScheduleRequest request,
         CancellationToken cancellationToken)
@@ -34,6 +38,7 @@ public class StaffSchedulesController : ControllerBase
     }
 
     [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.SchedulesManage)]
     public async Task<IActionResult> Update(
         long id,
         SaveStaffScheduleRequest request,
@@ -43,6 +48,7 @@ public class StaffSchedulesController : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.SchedulesManage)]
     public async Task<IActionResult> Delete(long id, CancellationToken cancellationToken)
     {
         await _schedules.DeleteAsync(id, cancellationToken);

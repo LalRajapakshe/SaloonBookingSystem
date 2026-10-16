@@ -63,6 +63,11 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 
     modelBuilder.ApplyConfiguration(new CustomerConfiguration());
     modelBuilder.ApplyConfiguration(new EmployeeConfiguration());
+    modelBuilder.ApplyConfiguration(new UserConfiguration());
+    modelBuilder.ApplyConfiguration(new RoleConfiguration());
+    modelBuilder.ApplyConfiguration(new PermissionConfiguration());
+    modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
+    modelBuilder.ApplyConfiguration(new RolePermissionConfiguration());
     modelBuilder.ApplyConfiguration(new TenantConfiguration());
     modelBuilder.ApplyConfiguration(new BranchConfiguration());
 

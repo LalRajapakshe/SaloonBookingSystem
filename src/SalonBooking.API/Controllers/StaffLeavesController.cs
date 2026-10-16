@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Features.Scheduling;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -18,6 +20,7 @@ public class StaffLeavesController : ControllerBase
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.LeavesRead)]
     public async Task<IActionResult> Get(
         [FromQuery] StaffLeaveQueryRequest request,
         CancellationToken cancellationToken)
@@ -26,6 +29,7 @@ public class StaffLeavesController : ControllerBase
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.LeavesManage)]
     public async Task<IActionResult> Create(
         SaveStaffLeaveRequest request,
         CancellationToken cancellationToken)
@@ -34,6 +38,7 @@ public class StaffLeavesController : ControllerBase
     }
 
     [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.LeavesManage)]
     public async Task<IActionResult> Update(
         long id,
         SaveStaffLeaveRequest request,
@@ -43,6 +48,7 @@ public class StaffLeavesController : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.LeavesManage)]
     public async Task<IActionResult> Delete(long id, CancellationToken cancellationToken)
     {
         await _leave.DeleteAsync(id, cancellationToken);

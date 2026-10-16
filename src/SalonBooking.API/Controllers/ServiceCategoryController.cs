@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using SalonBooking.API.Authorization;
 using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Features.ServiceCategory.DTOs;
+using SalonBooking.Application.Security;
 
 namespace SalonBooking.API.Controllers;
 
@@ -22,6 +24,7 @@ public class ServiceCategoriesController
     }
 
     [HttpPost]
+    [RequiresPermission(PermissionCatalog.ServiceCategoriesManage)]
     public async Task<IActionResult> Create(CreateServiceCategoryRequest request)
     {
         var serviceCategory = await _serviceCategoryService.CreateAsync(request);
@@ -38,6 +41,7 @@ public class ServiceCategoriesController
  //   }
 
     [HttpGet("{id:long}")]
+    [RequiresPermission(PermissionCatalog.ServiceCategoriesRead)]
     public async Task<IActionResult> GetById(long id)
     {
         var serviceCategory = await _serviceCategoryService.GetByIdAsync(id);
@@ -49,6 +53,7 @@ public class ServiceCategoriesController
     }
 
     [HttpGet]
+    [RequiresPermission(PermissionCatalog.ServiceCategoriesRead)]
     public async Task<IActionResult> GetServiceCategories(
         [FromQuery] ServiceCategoryQueryRequest request)
     {
@@ -58,6 +63,7 @@ public class ServiceCategoriesController
     }
 
     [HttpPut("{id:long}")]
+    [RequiresPermission(PermissionCatalog.ServiceCategoriesManage)]
     public async Task<IActionResult> Update(
         long id,
         UpdateServiceCategoryRequest request)
@@ -72,6 +78,7 @@ public class ServiceCategoriesController
     }
 
     [HttpDelete("{id:long}")]
+    [RequiresPermission(PermissionCatalog.ServiceCategoriesManage)]
     public async Task<IActionResult> Delete(long id)
     {
         await _serviceCategoryService.DeleteAsync(id);

@@ -6,4 +6,7 @@ public interface IAuthenticationService
 {
     Task<LoginResponse> LoginAsync(
         LoginRequest request);
+
+    Task<CurrentUserResponse> GetCurrentAsync(
+        CancellationToken cancellationToken = default);
 }

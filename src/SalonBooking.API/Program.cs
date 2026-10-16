@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SalonBooking.Persistence.Context;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -17,7 +18,9 @@ using SalonBooking.Application.Features.Customer.Validators;
 
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Identity;
+using SalonBooking.API.Authorization;
 using SalonBooking.API.Infrastructure;
+using SalonBooking.Application.Security;
 using SalonBooking.Domain.Entities;
 
 
@@ -71,6 +74,8 @@ builder.Services.AddScoped<IEmployeeCapabilityService, EmployeeCapabilityService
 builder.Services.AddScoped<IStaffScheduleService, StaffScheduleService>();
 builder.Services.AddScoped<IStaffLeaveService, StaffLeaveService>();
 builder.Services.AddScoped<IAvailabilityQueryService, AvailabilityQueryService>();
+builder.Services.AddScoped<IUserAccountService, UserAccountService>();
+builder.Services.AddScoped<IRoleAdminService, RoleAdminService>();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -104,7 +109,17 @@ builder.Services.AddAuthentication(
         options.MapInboundClaims = true;
     });    
 
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(options =>
+    {
+        foreach (var permission in PermissionCatalog.All)
+        {
+            options.AddPolicy(
+                RequiresPermissionAttribute.Prefix + permission.Code,
+                policy => policy.Requirements.Add(new PermissionRequirement(permission.Code)));
+        }
+    });
+    builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+    builder.Services.AddScoped<ActiveAccountMiddleware>();
 
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -191,8 +206,12 @@ if (app.Environment.IsDevelopment())
 {
         app.UseSwagger();
     app.UseSwaggerUI();
-    await DevelopmentAdminSeeder.SeedAsync(app.Services);
    // app.MapOpenApi();
+}
+
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+{
+    await AccessControlBootstrap.EnsureAsync(app.Services);
 }
 
 app.UseHttpsRedirection();
@@ -203,6 +222,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+app.UseMiddleware<ActiveAccountMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

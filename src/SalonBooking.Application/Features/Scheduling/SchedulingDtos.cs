@@ -15,6 +15,30 @@ public sealed class AppointmentQueryRequest
     public int PageSize { get; set; } = 20;
 }
 
+public sealed class CreateOwnAppointmentRequest
+{
+    public long ServiceId { get; set; }
+
+    public DateOnly AppointmentDate { get; set; }
+
+    public DateTime? PreferredStartTime { get; set; }
+
+    public string? Notes { get; set; }
+}
+
+public sealed class CustomerServiceChoiceResponse
+{
+    public long ServiceId { get; set; }
+
+    public long BranchId { get; set; }
+
+    public string ServiceName { get; set; } = string.Empty;
+
+    public int DurationMinutes { get; set; }
+
+    public decimal Price { get; set; }
+}
+
 public sealed class CreateAppointmentRequest
 {
     public long BranchId { get; set; }

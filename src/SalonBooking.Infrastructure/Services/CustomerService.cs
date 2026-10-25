@@ -3,6 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
+using SalonBooking.Application.Documents;
 using SalonBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +13,16 @@ public class CustomerService : ICustomerService
 {
     private readonly SalonBookingDbContext _context;
      private readonly ICurrentUserService _currentUserService;
+    private readonly IDocumentNumberService _numbers;
 
-    public CustomerService(SalonBookingDbContext context, ICurrentUserService currentUserService)
+    public CustomerService(
+        SalonBookingDbContext context,
+        ICurrentUserService currentUserService,
+        IDocumentNumberService numbers)
     {
             _context = context;
             _currentUserService = currentUserService;
+            _numbers = numbers;
     }
     public async Task<CustomerResponse> CreateAsync(CreateCustomerRequest request)
     {
@@ -45,21 +51,13 @@ public class CustomerService : ICustomerService
         if (exists){     
              throw new Exception("Customer(Mobile No) already exists.."); 
         }
-        var lastCustomer = await _context.Customers
-           .IgnoreQueryFilters()
-           .Where(e => e.TenantId == tenantId)
-           .OrderByDescending(c => c.CustomerId).FirstOrDefaultAsync();
-           
-                long  nextNumber = lastCustomer == null
-                    ? 1
-                    : lastCustomer.CustomerId + 1;
-        var customer = new Customer
+        return await _numbers.ExecuteAsync(async () =>
+        {
+            var customer = new Customer
             {
-                TenantId = tenantId, 
-                BranchId = branchId, 
-
-                CustomerCode = $"CUS{nextNumber:D6}", 
-               // CustomerCode = $"CUS{DateTime.Now.Ticks}",
+                TenantId = tenantId,
+                BranchId = branchId,
+                CustomerCode = await _numbers.NextCodeAsync(tenantId, DocSeriesKind.Customer),
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 MobileNo = request.MobileNo,
@@ -67,14 +65,12 @@ public class CustomerService : ICustomerService
                 Gender = request.Gender,
                 DateOfBirth = request.DateOfBirth,
                 Remarks = request.Remarks,
-              //  IsActive = true
-                //  reatedDate = DateTime.UtcNow
             };
 
-        _context.Customers.Add(customer);
-        await _context.SaveChangesAsync();
-
-        return CustomerResponse.From(customer);
+            _context.Customers.Add(customer);
+            await _context.SaveChangesAsync();
+            return CustomerResponse.From(customer);
+        });
     }
 
   public async Task<PagedResult<CustomerResponse>> GetCustomersAsync(CustomerQueryRequest request)

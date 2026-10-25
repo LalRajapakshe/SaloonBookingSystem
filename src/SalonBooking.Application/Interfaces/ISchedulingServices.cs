@@ -17,6 +17,13 @@ public interface IAppointmentWorkflowService
         CreateAppointmentRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<CustomerServiceChoiceResponse>> ListOwnServicesAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<AppointmentResponse> CreateOwnAppointmentAsync(
+        CreateOwnAppointmentRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<AppointmentResponse> UpdateAppointmentAsync(
         long appointmentId,
         UpdateAppointmentRequest request,

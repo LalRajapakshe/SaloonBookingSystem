@@ -44,6 +44,8 @@ public class SalonBookingDbContext : DbContext
 
   public DbSet<Customer> Customers => Set<Customer>();
 
+    public DbSet<DocSeries> DocSeries => Set<DocSeries>();
+
 public DbSet<Employee> Employees => Set<Employee>();
 
 public DbSet<Service> Services => Set<Service>();
@@ -62,6 +64,7 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
     base.OnModelCreating(modelBuilder);
 
     modelBuilder.ApplyConfiguration(new CustomerConfiguration());
+    modelBuilder.ApplyConfiguration(new DocSeriesConfiguration());
     modelBuilder.ApplyConfiguration(new EmployeeConfiguration());
     modelBuilder.ApplyConfiguration(new UserConfiguration());
     modelBuilder.ApplyConfiguration(new RoleConfiguration());
@@ -92,6 +95,11 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
             !x.IsDeleted &&
             x.TenantId == _tenantId &&
             (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<DocSeries>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId);
 
     modelBuilder.Entity<Employee>()
         .HasQueryFilter(x =>

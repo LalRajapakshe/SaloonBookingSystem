@@ -120,6 +120,119 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
         return await MapLoadedAppointmentAsync(appointment, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<CustomerServiceChoiceResponse>> ListOwnServicesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await RequireSignedInCustomerAsync(cancellationToken);
+        var services = await _context.Services
+            .IgnoreQueryFilters()
+            .Where(service =>
+                service.TenantId == customer.TenantId &&
+                service.BranchId == customer.BranchId &&
+                service.IsActive &&
+                !service.IsDeleted)
+            .OrderBy(service => service.ServiceName)
+            .Select(service => new CustomerServiceChoiceResponse
+            {
+                ServiceId = service.ServiceId,
+                BranchId = service.BranchId,
+                ServiceName = service.ServiceName,
+                DurationMinutes = service.DurationMinutes,
+                Price = service.Price
+            })
+            .ToListAsync(cancellationToken);
+
+        return services;
+    }
+
+    public async Task<AppointmentResponse> CreateOwnAppointmentAsync(
+        CreateOwnAppointmentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await RequireSignedInCustomerAsync(cancellationToken);
+        if (request.AppointmentDate == default)
+        {
+            throw new SchedulingException("Appointment date is required.");
+        }
+
+        var service = await _context.Services
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                item => item.ServiceId == request.ServiceId &&
+                    item.TenantId == customer.TenantId &&
+                    item.BranchId == customer.BranchId &&
+                    item.IsActive &&
+                    !item.IsDeleted,
+                cancellationToken);
+        if (service == null)
+        {
+            throw new SchedulingException("That service is not available at your branch.");
+        }
+
+        DateTime? preferredStart = request.PreferredStartTime;
+        DateTime? preferredEnd = preferredStart?.AddMinutes(service.DurationMinutes);
+        ValidatePreferredTimes(request.AppointmentDate, preferredStart, preferredEnd);
+
+        var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+        if (notes is { Length: > 1000 })
+        {
+            notes = notes[..1000];
+        }
+
+        var appointment = new Appointment
+        {
+            TenantId = customer.TenantId,
+            BranchId = customer.BranchId,
+            CustomerId = customer.CustomerId,
+            AppointmentDate = request.AppointmentDate,
+            Status = AppointmentStatus.Pending,
+            Notes = notes
+        };
+        _context.Appointments.Add(appointment);
+        AddStatusHistory(appointment, null, AppointmentStatus.Pending, "Requested from the customer app");
+
+        var line = new AppointmentService
+        {
+            TenantId = customer.TenantId,
+            BranchId = customer.BranchId,
+            Appointment = appointment,
+            ServiceId = service.ServiceId,
+            DurationMinutes = service.DurationMinutes,
+            UnitPrice = service.Price,
+            Sequence = 1,
+            PreferredStartTime = preferredStart,
+            PreferredEndTime = preferredEnd
+        };
+        PrepareInsertedRowVersion(line);
+        _context.AppointmentServices.Add(line);
+        await _context.SaveChangesAsync(cancellationToken);
+        return await MapLoadedAppointmentAsync(appointment, cancellationToken);
+    }
+
+    private async Task<Customer> RequireSignedInCustomerAsync(CancellationToken cancellationToken)
+    {
+        if (_currentUser.UserCategory != UserCategory.Customer || _currentUser.CustomerId is not > 0)
+        {
+            throw new UnauthorizedAccessException("A customer sign-in is required.");
+        }
+
+        var tenantId = _currentUser.RequireTenantId();
+        var customer = await _context.Customers
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                item => item.CustomerId == _currentUser.CustomerId &&
+                    item.TenantId == tenantId &&
+                    item.IsActive &&
+                    !item.IsDeleted,
+                cancellationToken);
+        if (customer == null)
+        {
+            throw new UnauthorizedAccessException("The signed-in customer was not found.");
+        }
+
+        return customer;
+    }
+
     public async Task<AppointmentResponse> UpdateAppointmentAsync(
         long appointmentId,
         UpdateAppointmentRequest request,
@@ -131,11 +244,17 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
             throw new SchedulingException("Appointment date is required.");
         }
 
-        var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
-        if (request.AppointmentDate != appointment.AppointmentDate &&
-            lines.Any(line => !line.IsCancelled && line.StartTime != null))
+        if (appointment.Status != AppointmentStatus.Pending)
         {
-            throw new SchedulingException("Reschedule the service lines before changing the appointment date.");
+            throw new SchedulingException(
+                "The appointment can be edited only before the customer confirms it.");
+        }
+
+        var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
+        if (lines.Any(line => !line.IsCancelled && line.StartTime != null))
+        {
+            throw new SchedulingException(
+                "The appointment can be edited only before a time slot is allocated.");
         }
 
         appointment.AppointmentDate = request.AppointmentDate;

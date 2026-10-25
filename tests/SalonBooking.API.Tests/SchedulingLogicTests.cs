@@ -238,6 +238,42 @@ public class SchedulingLogicTests
             otherBranchService.GetAppointmentAsync(appointment.AppointmentId));
     }
 
+    [Fact]
+    public async Task Customer_booking_stays_pending_until_the_salon_assigns_a_slot()
+    {
+        await using var scenario = await SchedulingScenario.CreateAsync();
+        var customerUser = new SchedulingUser(
+            scenario.TenantId,
+            scenario.BranchId,
+            UserCategory.Customer,
+            scenario.CustomerId);
+        await using var customerDb = scenario.CreateContext(customerUser);
+        var booking = new AppointmentWorkflowService(customerDb, customerUser);
+        var preferred = AppointmentDate.ToDateTime(new TimeOnly(9, 0));
+
+        var created = await booking.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = AppointmentDate,
+            PreferredStartTime = preferred,
+            Notes = "Requested stylist: Any available stylist"
+        });
+
+        Assert.Equal(nameof(AppointmentStatus.Pending), created.Status);
+        Assert.Equal(SchedulingStateCalculator.Unscheduled, created.SchedulingState);
+        var line = Assert.Single(created.Services);
+        Assert.Null(line.StartTime);
+        Assert.Null(line.EmployeeId);
+        Assert.Equal(preferred, line.PreferredStartTime);
+
+        var listed = await scenario.Appointments.GetAppointmentsAsync(new AppointmentQueryRequest
+        {
+            BranchId = scenario.BranchId,
+            Date = AppointmentDate
+        });
+        Assert.Contains(listed.Items, item => item.AppointmentId == created.AppointmentId);
+    }
+
     private static DateTime At(int hour, int minute = 0) =>
         new(AppointmentDate.Year, AppointmentDate.Month, AppointmentDate.Day, hour, minute, 0);
 
@@ -366,6 +402,11 @@ public class SchedulingLogicTests
             return new SalonBookingDbContext(Options(_connection), new SchedulingUser(tenantId, branchId));
         }
 
+        public SalonBookingDbContext CreateContext(ICurrentUserService user)
+        {
+            return new SalonBookingDbContext(Options(_connection), user);
+        }
+
         public AppointmentWorkflowService Workflow(SalonBookingDbContext db, long tenantId, long? branchId)
         {
             return new AppointmentWorkflowService(db, new SchedulingUser(tenantId, branchId));
@@ -474,10 +515,16 @@ public class SchedulingLogicTests
 
     private sealed class SchedulingUser : ICurrentUserService
     {
-        public SchedulingUser(long tenantId, long? branchId)
+        public SchedulingUser(
+            long tenantId,
+            long? branchId,
+            UserCategory? category = null,
+            long? customerId = null)
         {
             TenantId = tenantId;
             BranchId = branchId;
+            UserCategory = category ?? SalonBooking.Domain.Enums.UserCategory.General;
+            CustomerId = customerId;
         }
 
         public bool IsAuthenticated => true;
@@ -486,8 +533,8 @@ public class SchedulingLogicTests
         public long? BranchId { get; }
         public string? Username => "scheduler";
         public string? Role => "Admin";
-        public UserCategory? UserCategory => SalonBooking.Domain.Enums.UserCategory.General;
+        public UserCategory? UserCategory { get; }
         public long? EmployeeId => null;
-        public long? CustomerId => null;
+        public long? CustomerId { get; }
     }
 }

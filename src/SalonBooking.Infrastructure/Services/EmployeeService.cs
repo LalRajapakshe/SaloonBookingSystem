@@ -3,6 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
+using SalonBooking.Application.Documents;
 using SalonBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +13,16 @@ public class EmployeeService : IEmployeeService
 {
     private readonly SalonBookingDbContext _context;
      private readonly ICurrentUserService _currentUserService;
+    private readonly IDocumentNumberService _numbers;
 
-    public EmployeeService(SalonBookingDbContext context, ICurrentUserService currentUserService)
+    public EmployeeService(
+        SalonBookingDbContext context,
+        ICurrentUserService currentUserService,
+        IDocumentNumberService numbers)
     {
             _context = context;
             _currentUserService = currentUserService;
+            _numbers = numbers;
     }
     public async Task<EmployeeResponse> CreateAsync(CreateEmployeeRequest request)
     {
@@ -44,19 +50,13 @@ public class EmployeeService : IEmployeeService
         {
              throw new Exception("Employee mobile number already exists.");
         }
-        var lastEmployee = await _context.Employees
-           .IgnoreQueryFilters()
-           .Where(e => e.TenantId == tenantId)
-           .OrderByDescending(e => e.EmployeeId).FirstOrDefaultAsync();
-                long  nextNumber = lastEmployee == null
-                    ? 1
-                    : lastEmployee.EmployeeId + 1;
-        var employee = new Employee
+        return await _numbers.ExecuteAsync(async () =>
+        {
+            var employee = new Employee
             {
                 TenantId = tenantId,
                 BranchId = branchId,
-
-                EmployeeCode = $"EMP{nextNumber:D6}", 
+                EmployeeCode = await _numbers.NextCodeAsync(tenantId, DocSeriesKind.Employee),
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 MobileNo = request.MobileNo,
@@ -66,15 +66,13 @@ public class EmployeeService : IEmployeeService
                 Address = request.Address,
                 HireDate = request.HireDate,
                 Designation = request.Designation,
-                Salary = request.Salary,    
-               // IsActive = true
-              //  CreatedDate = DateTime.UtcNow
+                Salary = request.Salary,
             };
 
-        _context.Employees.Add(employee);
-        await _context.SaveChangesAsync();
-
-        return EmployeeResponse.From(employee);
+            _context.Employees.Add(employee);
+            await _context.SaveChangesAsync();
+            return EmployeeResponse.From(employee);
+        });
     }
 
   public async Task<PagedResult<EmployeeResponse>> GetEmployeesAsync(EmployeeQueryRequest request)

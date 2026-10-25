@@ -3,6 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
+using SalonBooking.Application.Documents;
 using SalonBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +13,16 @@ public class ServiceService : IServiceService
 {
     private readonly SalonBookingDbContext _context;
      private readonly ICurrentUserService _currentUserService;
+    private readonly IDocumentNumberService _numbers;
 
-    public ServiceService(SalonBookingDbContext context, ICurrentUserService currentUserService)
+    public ServiceService(
+        SalonBookingDbContext context,
+        ICurrentUserService currentUserService,
+        IDocumentNumberService numbers)
     {
             _context = context;
             _currentUserService = currentUserService;
+            _numbers = numbers;
     }
     public async Task<ServiceResponse> CreateAsync(CreateServiceRequest request)
     {
@@ -53,21 +59,14 @@ public class ServiceService : IServiceService
         if (exists){     
              throw new Exception("Service already exists.."); 
         }
-        var lastService = await _context.Services
-           .IgnoreQueryFilters()
-           .Where(item => item.TenantId == tenantId)
-           .OrderByDescending(c => c.ServiceId).FirstOrDefaultAsync();
-                long  nextNumber = lastService == null
-                    ? 1
-                    : lastService.ServiceId + 1;
-        var service = new Service
+        return await _numbers.ExecuteAsync(async () =>
+        {
+            var service = new Service
             {
-                TenantId = tenantId, 
+                TenantId = tenantId,
                 BranchId = branchId,
-                ServiceCategoryId = request.ServiceCategoryId, 
-
-                ServiceCode = $"SER{nextNumber:D6}", 
-               // ServiceCode = $"SER{DateTime.Now.Ticks}",
+                ServiceCategoryId = request.ServiceCategoryId,
+                ServiceCode = await _numbers.NextCodeAsync(tenantId, DocSeriesKind.Service),
                 ServiceName = request.ServiceName,
                 Description = request.Description,
                 DurationMinutes = request.DurationMinutes,
@@ -76,10 +75,10 @@ public class ServiceService : IServiceService
                 CommissionPercentage = request.CommissionPercentage,
             };
 
-        _context.Services.Add(service);
-        await _context.SaveChangesAsync();
-
-        return ServiceResponse.From(service);
+            _context.Services.Add(service);
+            await _context.SaveChangesAsync();
+            return ServiceResponse.From(service);
+        });
     }
 
   public async Task<PagedResult<ServiceResponse>> GetServicesAsync(ServiceQueryRequest request)

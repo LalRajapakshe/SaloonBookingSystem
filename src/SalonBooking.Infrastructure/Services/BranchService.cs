@@ -3,6 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
+using SalonBooking.Application.Documents;
 using SalonBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +13,16 @@ public class BranchService : IBranchService
 {
     private readonly SalonBookingDbContext _context;
      private readonly ICurrentUserService _currentUserService;
+    private readonly IDocumentNumberService _numbers;
 
-    public BranchService(SalonBookingDbContext context, ICurrentUserService currentUserService)
+    public BranchService(
+        SalonBookingDbContext context,
+        ICurrentUserService currentUserService,
+        IDocumentNumberService numbers)
     {
             _context = context;
             _currentUserService = currentUserService;
+            _numbers = numbers;
     }
     public async Task<BranchResponse> CreateAsync(CreateBranchRequest request)
     {
@@ -32,54 +38,40 @@ public class BranchService : IBranchService
         if (tenant == null)
             throw new KeyNotFoundException();
 
-        var lastBranch = await _context.Branches
-        .IgnoreQueryFilters()
-        .Where(item => item.TenantId == tenantId)
-        .OrderByDescending(t => t.BranchId)
-        .FirstOrDefaultAsync();
-
-        long nextNumber = lastBranch == null
-            ? 1
-            : lastBranch.BranchId + 1;
-
-        string branchCode = $"BRN{nextNumber:D6}";
-        
-        var branch = new Branch
+        return await _numbers.ExecuteAsync(async () =>
         {
-            BranchCode = branchCode,
-            BranchName = request.BranchName,
-            AddressLine1 = request.AddressLine1,
-            AddressLine2  = request.AddressLine2,
-            City = request.City,
-            PhoneNo = request.PhoneNo,
-            Email = request.Email,
-            ManagerName = request.ManagerName,
-            IsHeadOffice = request.IsHeadOffice,
-           // IsActive  = true,
-          //  IsDeleted = request.false,
-            TenantId = tenantId
+            var branch = new Branch
+            {
+                BranchCode = await _numbers.NextCodeAsync(tenantId, DocSeriesKind.Branch),
+                BranchName = request.BranchName,
+                AddressLine1 = request.AddressLine1,
+                AddressLine2 = request.AddressLine2,
+                City = request.City,
+                PhoneNo = request.PhoneNo,
+                Email = request.Email,
+                ManagerName = request.ManagerName,
+                IsHeadOffice = request.IsHeadOffice,
+                TenantId = tenantId
+            };
+            _context.Branches.Add(branch);
+            await _context.SaveChangesAsync();
 
-        };
-        _context.Branches.Add(branch);
-       //Console.WriteLine($"Branch.IsActive : {branch.IsActive}");
-      // Console.WriteLine($"Branch.IsDeleted: {branch.IsDeleted}");
-        await _context.SaveChangesAsync();
-
-        return new BranchResponse
-        {
-            TenantId = branch.TenantId,
-            BranchId = branch.BranchId,
-            BranchCode = branch.BranchCode,
-            BranchName = branch.BranchName,
-            AddressLine1 = branch.AddressLine1,
-            AddressLine2 = branch.AddressLine2,
-            City = branch.City,
-            PhoneNo = branch.PhoneNo,
-            Email = branch.Email,
-            ManagerName = branch.ManagerName,
-            IsHeadOffice = branch.IsHeadOffice,
-            IsActive = branch.IsActive
-        };
+            return new BranchResponse
+            {
+                TenantId = branch.TenantId,
+                BranchId = branch.BranchId,
+                BranchCode = branch.BranchCode,
+                BranchName = branch.BranchName,
+                AddressLine1 = branch.AddressLine1,
+                AddressLine2 = branch.AddressLine2,
+                City = branch.City,
+                PhoneNo = branch.PhoneNo,
+                Email = branch.Email,
+                ManagerName = branch.ManagerName,
+                IsHeadOffice = branch.IsHeadOffice,
+                IsActive = branch.IsActive
+            };
+        });
     }
 
   public async Task<PagedResult<BranchResponse>> GetBranchAsync(BranchQueryRequest request)
@@ -232,6 +224,7 @@ public class BranchService : IBranchService
             item => item.BranchId);
 
         branch.IsActive = false;
+        branch.IsDeleted = true;
 
         await _context.SaveChangesAsync();
         return true;

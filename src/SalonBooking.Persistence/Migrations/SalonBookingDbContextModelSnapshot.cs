@@ -484,6 +484,60 @@ namespace SalonBooking.Persistence.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.DocSeries", b =>
+                {
+                    b.Property<long>("DocId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("DocId"));
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DocType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("LastNo")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PadLength")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("DocId");
+
+                    b.HasIndex("TenantId", "DocType")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("Docs");
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.Employee", b =>
                 {
                     b.Property<long>("EmployeeId")
@@ -1385,6 +1439,17 @@ namespace SalonBooking.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.DocSeries", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Tenant");
                 });

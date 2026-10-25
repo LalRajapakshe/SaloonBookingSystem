@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Security;
 using SalonBooking.Domain.Enums;
 using SalonBooking.Persistence.Context;
 
@@ -33,8 +34,18 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
             .Select(item => new { item.IsActive, item.UserCategory, item.TenantId })
             .FirstOrDefaultAsync();
 
-        if (user is not { IsActive: true } || user.UserCategory == UserCategory.Customer)
+        if (user is not { IsActive: true })
         {
+            return;
+        }
+
+        if (user.UserCategory == UserCategory.Customer)
+        {
+            if (PermissionCatalog.CustomerCodes.Contains(requirement.Permission))
+            {
+                context.Succeed(requirement);
+            }
+
             return;
         }
 

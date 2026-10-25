@@ -3,6 +3,7 @@ using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Common;
 using SalonBooking.Persistence.Context;
 using SalonBooking.Domain.Entities;
+using SalonBooking.Application.Documents;
 using SalonBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +13,16 @@ public class ServiceCategoryService : IServiceCategoryService
 {
     private readonly SalonBookingDbContext _context;
      private readonly ICurrentUserService _currentUserService;
+    private readonly IDocumentNumberService _numbers;
 
-    public ServiceCategoryService(SalonBookingDbContext context, ICurrentUserService currentUserService)
+    public ServiceCategoryService(
+        SalonBookingDbContext context,
+        ICurrentUserService currentUserService,
+        IDocumentNumberService numbers)
     {
             _context = context;
             _currentUserService = currentUserService;
+            _numbers = numbers;
     }
     public async Task<ServiceCategoryResponse> CreateAsync(CreateServiceCategoryRequest request)
     {
@@ -43,32 +49,21 @@ public class ServiceCategoryService : IServiceCategoryService
         if (exists){     
              throw new Exception("Service category already exists.."); 
         }
-        var lastServiceCategory = await _context.ServiceCategories
-           .IgnoreQueryFilters()
-           .Where(item => item.TenantId == tenantId)
-           .OrderByDescending(c => c.ServiceCategoryId).FirstOrDefaultAsync();
-                long  nextNumber = lastServiceCategory == null
-                    ? 1
-                    : lastServiceCategory.ServiceCategoryId + 1;
-        var serviceCategory = new ServiceCategory
+        return await _numbers.ExecuteAsync(async () =>
+        {
+            var serviceCategory = new ServiceCategory
             {
-                TenantId = tenantId, 
-              //  BranchId = _currentUserService.BranchId, 
-
-                CategoryCode = $"CAT{nextNumber:D6}", 
-               // CategoryCode = $"CAT{DateTime.Now.Ticks}",
+                TenantId = tenantId,
+                CategoryCode = await _numbers.NextCodeAsync(tenantId, DocSeriesKind.Category),
                 CategoryName = request.CategoryName,
                 Description = request.Description,
-                DisplayOrder = request.DisplayOrder,
-
-              //  IsActive = true
-                //  reatedDate = DateTime.UtcNow
+                DisplayOrder = request.DisplayOrder
             };
 
-        _context.ServiceCategories.Add(serviceCategory);
-        await _context.SaveChangesAsync();
-
-        return ServiceCategoryResponse.From(serviceCategory);
+            _context.ServiceCategories.Add(serviceCategory);
+            await _context.SaveChangesAsync();
+            return ServiceCategoryResponse.From(serviceCategory);
+        });
     }
 
   public async Task<PagedResult<ServiceCategoryResponse>> GetServiceCategoriesAsync(ServiceCategoryQueryRequest request)

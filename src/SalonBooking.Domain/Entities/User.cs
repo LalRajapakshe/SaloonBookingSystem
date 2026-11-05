@@ -11,6 +11,12 @@ public class User : TenantEntity
 
     public UserCategory UserCategory { get; set; } = UserCategory.General;
 
+    /// <summary>
+    /// Platform operator. This is not a tenant role and cannot be granted
+    /// through role permissions.
+    /// </summary>
+    public bool IsPlatformAdministrator { get; set; }
+
     public long? EmployeeId { get; set; }
 
     public long? CustomerId { get; set; }

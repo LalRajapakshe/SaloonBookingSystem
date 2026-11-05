@@ -326,5 +326,6 @@ public class AppointmentModelTests : IDisposable
         public UserCategory? UserCategory => Domain.Enums.UserCategory.General;
         public long? EmployeeId => null;
         public long? CustomerId => null;
+        public bool IsPlatformAdministrator => false;
     }
 }

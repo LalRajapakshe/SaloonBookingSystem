@@ -38,6 +38,18 @@ public class EmployeeConfiguration
 
         builder.Property(x => x.Designation)
             .HasMaxLength(100);
+
+        builder.Property(x => x.Specialisation)
+            .HasMaxLength(150);
+
+        builder.Property(x => x.ProfessionalDescription)
+            .HasMaxLength(1000);
+
+        builder.Property(x => x.PhotoPath)
+            .HasMaxLength(80);
+
+        builder.Property(x => x.IsCustomerVisible)
+            .HasDefaultValue(false);
             
         builder.Property(x => x.Salary)
        .HasPrecision(18, 2);

@@ -26,6 +26,14 @@ public class EmployeeResponse
 
     public string? Designation { get; set; }
 
+    public string? Specialisation { get; set; }
+
+    public string? ProfessionalDescription { get; set; }
+
+    public string? PhotoPath { get; set; }
+
+    public bool IsCustomerVisible { get; set; }
+
     public decimal Salary { get; set; }
 
     public bool IsActive { get; set; }
@@ -52,6 +60,10 @@ public class EmployeeResponse
             Address = employee.Address,
             HireDate = employee.HireDate,
             Designation = employee.Designation,
+            Specialisation = employee.Specialisation,
+            ProfessionalDescription = employee.ProfessionalDescription,
+            PhotoPath = employee.PhotoPath,
+            IsCustomerVisible = employee.IsCustomerVisible,
             Salary = employee.Salary,
             IsActive = employee.IsActive,
             CreatedDate = employee.CreatedDate,

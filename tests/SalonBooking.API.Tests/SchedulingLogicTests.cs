@@ -242,6 +242,15 @@ public class SchedulingLogicTests
     public async Task Customer_booking_stays_pending_until_the_salon_assigns_a_slot()
     {
         await using var scenario = await SchedulingScenario.CreateAsync();
+        var branch = await scenario.Db.Branches.SingleAsync(item => item.BranchId == scenario.BranchId);
+        var service = await scenario.Db.Services.SingleAsync(item => item.ServiceId == scenario.ServiceId);
+        var employee = await scenario.Db.Employees.SingleAsync(item => item.EmployeeId == scenario.EmployeeId);
+        branch.IsCustomerVisible = true;
+        service.IsCustomerVisible = true;
+        employee.IsCustomerVisible = true;
+        await scenario.Db.SaveChangesAsync();
+        await scenario.Capabilities.AssignAsync(scenario.NewCapability());
+        await scenario.Schedules.CreateAsync(scenario.Working(new TimeOnly(9, 0), new TimeOnly(18, 0)));
         var customerUser = new SchedulingUser(
             scenario.TenantId,
             scenario.BranchId,
@@ -536,5 +545,6 @@ public class SchedulingLogicTests
         public UserCategory? UserCategory { get; }
         public long? EmployeeId => null;
         public long? CustomerId { get; }
+        public bool IsPlatformAdministrator => false;
     }
 }

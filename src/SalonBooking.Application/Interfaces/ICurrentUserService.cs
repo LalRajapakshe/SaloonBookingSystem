@@ -21,4 +21,6 @@ public interface ICurrentUserService
     long? EmployeeId { get; }
 
     long? CustomerId { get; }
+
+    bool IsPlatformAdministrator { get; }
 }

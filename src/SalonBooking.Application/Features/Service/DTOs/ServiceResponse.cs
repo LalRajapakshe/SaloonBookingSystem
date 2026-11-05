@@ -28,6 +28,12 @@ public class ServiceResponse
 
     public long TenantId { get; set; }
 
+    public string? PhotoPath { get; set; }
+
+    public bool IsCustomerVisible { get; set; }
+
+    public bool IsPopular { get; set; }
+
     public static ServiceResponse From(SalonBooking.Domain.Entities.Service service)
     {
         return new ServiceResponse
@@ -44,7 +50,10 @@ public class ServiceResponse
             IsActive = service.IsActive,
             CreatedDate = service.CreatedDate,
             BranchId = service.BranchId,
-            TenantId = service.TenantId
+            TenantId = service.TenantId,
+            PhotoPath = service.PhotoPath,
+            IsCustomerVisible = service.IsCustomerVisible,
+            IsPopular = service.IsPopular
         };
     }
 }

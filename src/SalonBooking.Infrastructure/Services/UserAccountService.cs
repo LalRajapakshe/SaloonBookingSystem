@@ -136,6 +136,12 @@ public sealed class UserAccountService : IUserAccountService
 
         await ReplaceRolesAsync(user.UserId, roles, cancellationToken);
         await EnsureManagerWouldRemainAsync(tenantId, user.UserId, WillManage(user, roles), cancellationToken);
+        await SalonAdministratorGuard.EnsureRemainsAsync(
+            _context,
+            tenantId,
+            user.UserId,
+            SalonAdministratorGuard.WillRemain(user, roles),
+            cancellationToken);
         await SaveHandlingUsernameCollisionAsync(cancellationToken);
         return Map(await RequireVisibleUserAsync(user.UserId, cancellationToken));
     }
@@ -156,6 +162,12 @@ public sealed class UserAccountService : IUserAccountService
         }
 
         await EnsureManagerWouldRemainAsync(tenantId, user.UserId, willManage, cancellationToken);
+        await SalonAdministratorGuard.EnsureRemainsAsync(
+            _context,
+            tenantId,
+            user.UserId,
+            SalonAdministratorGuard.WillRemain(user, user.UserRoles.Select(link => link.Role)),
+            cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         return Map(await RequireVisibleUserAsync(user.UserId, cancellationToken));
     }
@@ -170,6 +182,12 @@ public sealed class UserAccountService : IUserAccountService
         var roles = await LoadRolesAsync(tenantId, roleIds, user.UserCategory, cancellationToken);
         await ReplaceRolesAsync(user.UserId, roles, cancellationToken);
         await EnsureManagerWouldRemainAsync(tenantId, user.UserId, WillManage(user, roles), cancellationToken);
+        await SalonAdministratorGuard.EnsureRemainsAsync(
+            _context,
+            tenantId,
+            user.UserId,
+            SalonAdministratorGuard.WillRemain(user, roles),
+            cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         return Map(await RequireVisibleUserAsync(user.UserId, cancellationToken));
     }

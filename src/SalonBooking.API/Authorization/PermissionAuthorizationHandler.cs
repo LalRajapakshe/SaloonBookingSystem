@@ -31,11 +31,27 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(item => item.UserId == _currentUser.UserId && !item.IsDeleted)
-            .Select(item => new { item.IsActive, item.UserCategory, item.TenantId })
+            .Select(item => new { item.IsActive, item.UserCategory, item.TenantId, item.IsPlatformAdministrator })
             .FirstOrDefaultAsync();
 
         if (user is not { IsActive: true })
         {
+            return;
+        }
+
+        if (requirement.Permission == PermissionCatalog.PlatformManage)
+        {
+            if (user.IsPlatformAdministrator)
+            {
+                context.Succeed(requirement);
+            }
+
+            return;
+        }
+
+        if (user.IsPlatformAdministrator && PermissionCatalog.IsStaffCode(requirement.Permission))
+        {
+            context.Succeed(requirement);
             return;
         }
 

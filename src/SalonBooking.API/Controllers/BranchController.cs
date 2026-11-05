@@ -5,6 +5,7 @@ using SalonBooking.API.Authorization;
 using SalonBooking.Application.Interfaces;
 using SalonBooking.Application.Features.Branch.DTOs;
 using SalonBooking.Application.Security;
+using SalonBooking.Infrastructure.Services;
 
 namespace SalonBooking.API.Controllers;
 
@@ -14,10 +15,12 @@ namespace SalonBooking.API.Controllers;
 public class BranchController : ControllerBase
 {
     private readonly IBranchService _branchService;
+    private readonly CatalogueImageAdminService _photos;
 
-    public BranchController(IBranchService branchService)
+    public BranchController(IBranchService branchService, CatalogueImageAdminService photos)
     {
         _branchService = branchService;
+        _photos = photos;
     }
 
     [HttpPost]
@@ -72,5 +75,36 @@ public class BranchController : ControllerBase
         await _branchService.DeleteAsync(id);
 
         return NoContent();
+    }
+
+    [HttpPost("{id:long}/photo")]
+    [RequiresPermission(PermissionCatalog.BranchesManage)]
+    [RequestSizeLimit(5_242_880)]
+    public async Task<IActionResult> SavePhoto(long id, IFormFile? file, CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { title = "A photo file is required." });
+        }
+
+        await using var stream = file.OpenReadStream();
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, cancellationToken);
+        return Ok(await _photos.SaveBranchPhotoAsync(id, buffer.ToArray(), cancellationToken));
+    }
+
+    [HttpGet("{id:long}/photo")]
+    [RequiresPermission(PermissionCatalog.BranchesRead)]
+    public async Task<IActionResult> Photo(long id, CancellationToken cancellationToken)
+    {
+        var photo = await _photos.OpenBranchPhotoAsync(id, cancellationToken);
+        return photo == null ? NotFound() : File(photo.Content, photo.ContentType);
+    }
+
+    [HttpDelete("{id:long}/photo")]
+    [RequiresPermission(PermissionCatalog.BranchesManage)]
+    public async Task<IActionResult> RemovePhoto(long id, CancellationToken cancellationToken)
+    {
+        return Ok(await _photos.RemoveBranchPhotoAsync(id, cancellationToken));
     }
 }

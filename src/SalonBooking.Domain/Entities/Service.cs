@@ -34,6 +34,12 @@ public class Service : TenantEntity
     /// </summary>
     public decimal CommissionPercentage { get; set; }
 
+    public string? PhotoPath { get; set; }
+
+    public bool IsCustomerVisible { get; set; }
+
+    public bool IsPopular { get; set; }
+
     // Navigation Properties
     public Branch Branch { get; set; } = null!;
 

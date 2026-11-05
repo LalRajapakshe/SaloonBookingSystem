@@ -34,5 +34,8 @@ public class UpdateBranchRequestValidator : AbstractValidator<UpdateBranchReques
 
         RuleFor(x => x.ManagerName)
             .MaximumLength(100);
+
+        RuleFor(x => x.Highlight)
+            .MaximumLength(150);
     }
 }

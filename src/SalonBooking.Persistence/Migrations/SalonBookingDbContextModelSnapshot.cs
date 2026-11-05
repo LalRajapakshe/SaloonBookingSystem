@@ -138,6 +138,9 @@ namespace SalonBooking.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<long?>("PreferredEmployeeId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime?>("PreferredEndTime")
                         .HasColumnType("datetime2");
 
@@ -169,6 +172,8 @@ namespace SalonBooking.Persistence.Migrations
                     b.HasKey("AppointmentServiceId");
 
                     b.HasIndex("BranchId");
+
+                    b.HasIndex("PreferredEmployeeId");
 
                     b.HasIndex("ServiceId");
 
@@ -369,8 +374,17 @@ namespace SalonBooking.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<string>("Highlight")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsCustomerVisible")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -393,6 +407,10 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<string>("PhoneNo")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<long>("TenantId")
                         .HasColumnType("bigint");
@@ -535,7 +553,7 @@ namespace SalonBooking.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Docs");
+                    b.ToTable("Docs", (string)null);
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Employee", b =>
@@ -590,6 +608,11 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsCustomerVisible")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -609,9 +632,21 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("ProfessionalDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<decimal>("Salary")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Specialisation")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<long>("TenantId")
                         .HasColumnType("bigint");
@@ -624,6 +659,69 @@ namespace SalonBooking.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Employees");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.EmployeeQualification", b =>
+                {
+                    b.Property<long>("EmployeeQualificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("EmployeeQualificationId"));
+
+                    b.Property<string>("AwardingInstitution")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CertificatePath")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int?>("CompletionYear")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("EmployeeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsCustomerVisible")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("QualificationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("VerificationStatus")
+                        .HasColumnType("int");
+
+                    b.HasKey("EmployeeQualificationId");
+
+                    b.HasIndex("QualificationId");
+
+                    b.HasIndex("EmployeeId", "QualificationId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("EmployeeQualifications");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.EmployeeService", b =>
@@ -728,6 +826,57 @@ namespace SalonBooking.Persistence.Migrations
                         .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Permissions", (string)null);
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.Qualification", b =>
+                {
+                    b.Property<long>("QualificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("QualificationId"));
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("QualificationLevel")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("QualificationName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("QualificationId");
+
+                    b.HasIndex("TenantId", "QualificationName")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("Qualifications");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Role", b =>
@@ -843,14 +992,28 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsCustomerVisible")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsPopular")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<long?>("ModifiedBy")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
@@ -1200,6 +1363,11 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPlatformAdministrator")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("LastLoginDate")
                         .HasColumnType("datetime2");
 
@@ -1473,6 +1641,25 @@ namespace SalonBooking.Persistence.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.EmployeeQualification", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.Qualification", "Qualification")
+                        .WithMany("EmployeeQualifications")
+                        .HasForeignKey("QualificationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("Qualification");
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.EmployeeService", b =>
                 {
                     b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
@@ -1634,6 +1821,11 @@ namespace SalonBooking.Persistence.Migrations
             modelBuilder.Entity("SalonBooking.Domain.Entities.Employee", b =>
                 {
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.Qualification", b =>
+                {
+                    b.Navigation("EmployeeQualifications");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Role", b =>

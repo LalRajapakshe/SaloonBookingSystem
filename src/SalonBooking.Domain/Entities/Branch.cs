@@ -24,6 +24,12 @@ public class Branch : TenantEntity
 
     public bool IsHeadOffice { get; set; }
 
+    public string? Highlight { get; set; }
+
+    public string? PhotoPath { get; set; }
+
+    public bool IsCustomerVisible { get; set; }
+
     //public bool IsActive { get; set; } = true;
 
     //public bool IsDeleted { get; set; } = false;

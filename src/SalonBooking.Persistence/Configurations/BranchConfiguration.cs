@@ -42,6 +42,15 @@ public class BranchConfiguration : IEntityTypeConfiguration<Branch>
         builder.Property(b => b.IsHeadOffice)
             .HasDefaultValue(false);
 
+        builder.Property(b => b.Highlight)
+            .HasMaxLength(150);
+
+        builder.Property(b => b.PhotoPath)
+            .HasMaxLength(80);
+
+        builder.Property(b => b.IsCustomerVisible)
+            .HasDefaultValue(false);
+
        // builder.Property(b => b.IsActive)
        //     .HasDefaultValue(true);
 

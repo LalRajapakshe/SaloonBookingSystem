@@ -20,6 +20,8 @@ public sealed class CurrentUserResponse
 
     public bool IsActive { get; set; }
 
+    public bool IsPlatformAdministrator { get; set; }
+
     public List<string> Roles { get; set; } = [];
 
     public List<string> Permissions { get; set; } = [];

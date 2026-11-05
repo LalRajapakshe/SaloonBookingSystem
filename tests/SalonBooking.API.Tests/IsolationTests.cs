@@ -197,26 +197,40 @@ public class IsolationTests
     }
 
     [Fact]
-    public async Task Client_supplied_tenant_id_cannot_override_the_caller()
+    public async Task Salon_administrator_cannot_create_a_branch()
     {
         using var client = await _factory.CreateAuthenticatedClientAsync(ApiFactory.TenantUserAName);
+        var before = await _factory.ReadAsync(db => db.Branches.IgnoreQueryFilters().CountAsync());
         var created = await client.PostAsJsonAsync(
             "/api/Branch",
             BranchBody(_factory.TenantBId, "Created For A"));
 
-        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
-        var branch = await created.Content.ReadFromJsonAsync<BranchItem>();
-        Assert.Equal(_factory.TenantAId, branch!.TenantId);
-        Assert.True(branch.IsActive);
+        await AssertForbidden(created);
+        var after = await _factory.ReadAsync(db => db.Branches.IgnoreQueryFilters().CountAsync());
+        Assert.Equal(before, after);
+    }
 
+    [Fact]
+    public async Task Salon_administrator_can_update_a_branch_in_the_same_tenant()
+    {
+        using var client = await _factory.CreateAuthenticatedClientAsync(ApiFactory.TenantUserAName);
         var updated = await client.PutAsJsonAsync(
-            $"/api/Branch/{branch.BranchId}",
-            BranchBody(_factory.TenantBId, "Renamed For A"));
+            $"/api/Branch/{_factory.BranchA2Id}",
+            new
+            {
+                tenantId = _factory.TenantBId,
+                branchName = "Branch A2",
+                isHeadOffice = false,
+                isActive = true,
+                highlight = "City studio",
+                isCustomerVisible = true
+            });
         Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
 
-        var saved = await _factory.ReadAsync(db => db.Branches.IgnoreQueryFilters().SingleAsync(item => item.BranchId == branch.BranchId));
+        var saved = await _factory.ReadAsync(db => db.Branches.IgnoreQueryFilters().SingleAsync(item => item.BranchId == _factory.BranchA2Id));
         Assert.Equal(_factory.TenantAId, saved.TenantId);
-        Assert.Equal("Renamed For A", saved.BranchName);
+        Assert.Equal("City studio", saved.Highlight);
+        Assert.True(saved.IsCustomerVisible);
     }
 
     [Fact]

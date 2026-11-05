@@ -19,5 +19,9 @@ public class UpdateServiceRequest
     public decimal CommissionPercentage { get; set; }
 
       public bool IsActive { get; set; }
+
+    public bool IsCustomerVisible { get; set; }
+
+    public bool IsPopular { get; set; }
     
     }

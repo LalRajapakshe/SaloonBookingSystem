@@ -36,6 +36,15 @@ public class ServiceConfiguration
         builder.Property(x => x.CommissionPercentage)
             .HasPrecision(18, 2);
 
+        builder.Property(x => x.PhotoPath)
+            .HasMaxLength(80);
+
+        builder.Property(x => x.IsCustomerVisible)
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.IsPopular)
+            .HasDefaultValue(false);
+
        builder.HasIndex(x =>
             new
             {

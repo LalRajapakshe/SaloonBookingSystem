@@ -29,8 +29,9 @@ internal static class AccessReader
             EmployeeId = user.EmployeeId,
             CustomerId = user.CustomerId,
             IsActive = user.IsActive,
+            IsPlatformAdministrator = user.IsPlatformAdministrator,
             Roles = access.RoleNames,
-            Permissions = EffectivePermissions(user.UserCategory, access.PermissionCodes)
+            Permissions = EffectivePermissions(user, access.PermissionCodes)
         };
     }
 
@@ -53,9 +54,18 @@ internal static class AccessReader
         }
     }
 
-    public static List<string> EffectivePermissions(UserCategory category, IReadOnlyList<string> permissionCodes)
+    public static List<string> EffectivePermissions(User user, IReadOnlyList<string> permissionCodes)
     {
-        if (category != UserCategory.Customer)
+        if (user.IsPlatformAdministrator)
+        {
+            return PermissionCatalog.StaffCodes
+                .Append(PermissionCatalog.PlatformManage)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(code => code, StringComparer.Ordinal)
+                .ToList();
+        }
+
+        if (user.UserCategory != UserCategory.Customer)
         {
             return permissionCodes.ToList();
         }

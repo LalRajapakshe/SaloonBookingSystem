@@ -35,6 +35,11 @@ public static class PermissionCatalog
     public const string CustomerProfileRead = "customer.profile.read";
     public const string CustomerAppointmentsRead = "customer.appointments.read";
     public const string CustomerAppointmentsCreate = "customer.appointments.create";
+    public const string CustomerCatalogueRead = "customer.catalogue.read";
+    public const string CustomerAvailabilityRead = "customer.availability.read";
+    public const string QualificationsRead = "qualifications.read";
+    public const string QualificationsManage = "qualifications.manage";
+    public const string PlatformManage = "platform.manage";
 
     public const string AdminRoleCode = "ADMIN";
     public const string StaffRoleCode = "STAFF";
@@ -68,17 +73,23 @@ public static class PermissionCatalog
         Define(TenantsManage, "Manage tenant", "Tenant", "Update the salon business profile. Creating a new business stays closed."),
         Define(CustomerProfileRead, "View own profile", "Customer", "View the signed-in customer's own profile."),
         Define(CustomerAppointmentsRead, "View own appointments", "Customer", "View the signed-in customer's own appointments."),
-        Define(CustomerAppointmentsCreate, "Create own appointments", "Customer", "Create an appointment for the signed-in customer.")
+        Define(CustomerAppointmentsCreate, "Create own appointments", "Customer", "Create an appointment for the signed-in customer."),
+        Define(CustomerCatalogueRead, "View salon catalogue", "Customer", "View published branches, services, and stylists in this salon."),
+        Define(CustomerAvailabilityRead, "View appointment times", "Customer", "View open and closed appointment times."),
+        Define(QualificationsRead, "View qualifications", "Qualifications", "View qualification records and stylist qualifications."),
+        Define(QualificationsManage, "Manage qualifications", "Qualifications", "Create qualifications and maintain stylist qualifications."),
+        Define(PlatformManage, "Manage the platform", "Platform", "Create salon businesses and branches. This permission cannot be granted by a role.")
     ];
 
     public static IReadOnlySet<string> StaffCodes { get; } =
-        All.Where(item => item.Area != "Customer").Select(item => item.Code).ToHashSet(StringComparer.Ordinal);
+        All.Where(item => item.Area is not "Customer" and not "Platform").Select(item => item.Code).ToHashSet(StringComparer.Ordinal);
 
     public static IReadOnlySet<string> OperationalCodes { get; } =
         StaffCodes.Where(code =>
             !code.StartsWith("users.", StringComparison.Ordinal) &&
             !code.StartsWith("roles.", StringComparison.Ordinal) &&
             !code.StartsWith("permissions.", StringComparison.Ordinal) &&
+            !code.StartsWith("qualifications.", StringComparison.Ordinal) &&
             !string.Equals(code, TenantsManage, StringComparison.Ordinal))
             .ToHashSet(StringComparer.Ordinal);
 

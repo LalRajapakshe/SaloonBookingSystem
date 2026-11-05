@@ -21,4 +21,14 @@ public class CreateTenantRequest
     public int MaxBranches { get; set; }
 
     public int MaxUsers { get; set; }
+
+    public string AdministratorUsername { get; set; } = string.Empty;
+
+    public string AdministratorPassword { get; set; } = string.Empty;
+
+    public string AdministratorFirstName { get; set; } = string.Empty;
+
+    public string AdministratorLastName { get; set; } = string.Empty;
+
+    public string? AdministratorEmail { get; set; }
 }

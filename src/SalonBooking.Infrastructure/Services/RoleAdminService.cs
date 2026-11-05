@@ -80,6 +80,10 @@ public sealed class RoleAdminService : IRoleAdminService
         role.RoleName = RequiredName(request.RoleName);
         role.Description = Clean(request.Description);
         role.IsActive = request.IsActive;
+        await SalonAdministratorGuard.EnsureRoleDeactivationLeavesAnAdministratorAsync(
+            _context,
+            role,
+            cancellationToken);
         var stillGrants = role.IsActive &&
                           role.RolePermissions.Any(item =>
                               item.Permission is { IsActive: true, IsDeleted: false, PermissionCode: PermissionCatalog.UsersManage });
@@ -102,6 +106,11 @@ public sealed class RoleAdminService : IRoleAdminService
         if (permissions.Count != ids.Count)
         {
             throw new IdentityException("One or more permissions are not in the catalog.");
+        }
+
+        if (permissions.Any(permission => permission.PermissionCode == PermissionCatalog.PlatformManage))
+        {
+            throw new IdentityException("System administrator access cannot be granted through a role.");
         }
 
         if (string.Equals(role.RoleCode, PermissionCatalog.CustomerRoleCode, StringComparison.OrdinalIgnoreCase) &&
@@ -156,7 +165,10 @@ public sealed class RoleAdminService : IRoleAdminService
         _ = _currentUser.RequireTenantId();
         var permissions = await _context.Permissions
             .AsNoTracking()
-            .Where(permission => permission.IsActive && !permission.IsDeleted)
+            .Where(permission =>
+                permission.IsActive &&
+                !permission.IsDeleted &&
+                permission.PermissionCode != PermissionCatalog.PlatformManage)
             .OrderBy(permission => permission.PermissionCode)
             .ToListAsync(cancellationToken);
 

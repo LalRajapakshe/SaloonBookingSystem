@@ -155,23 +155,86 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
             throw new SchedulingException("Appointment date is required.");
         }
 
+        var branchId = request.BranchId > 0 ? request.BranchId : customer.BranchId;
+        var branch = await _context.Branches
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                item => item.BranchId == branchId &&
+                    item.TenantId == customer.TenantId &&
+                    item.IsActive &&
+                    !item.IsDeleted &&
+                    item.IsCustomerVisible,
+                cancellationToken);
+        if (branch == null)
+        {
+            throw new SchedulingException("That studio is not available.");
+        }
+
         var service = await _context.Services
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(
                 item => item.ServiceId == request.ServiceId &&
                     item.TenantId == customer.TenantId &&
-                    item.BranchId == customer.BranchId &&
+                    item.BranchId == branch.BranchId &&
                     item.IsActive &&
-                    !item.IsDeleted,
+                    !item.IsDeleted &&
+                    item.IsCustomerVisible,
                 cancellationToken);
         if (service == null)
         {
-            throw new SchedulingException("That service is not available at your branch.");
+            throw new SchedulingException("That service is not available at the selected studio.");
+        }
+
+        if (request.PreferredStartTime == null)
+        {
+            throw new SchedulingException("A preferred time is required.");
         }
 
         DateTime? preferredStart = request.PreferredStartTime;
         DateTime? preferredEnd = preferredStart?.AddMinutes(service.DurationMinutes);
         ValidatePreferredTimes(request.AppointmentDate, preferredStart, preferredEnd);
+
+        var eligible = await EligibleStylistIdsAsync(
+            customer.TenantId,
+            branch.BranchId,
+            service.ServiceId,
+            cancellationToken);
+        if (request.PreferredEmployeeId is > 0 && !eligible.Contains(request.PreferredEmployeeId.Value))
+        {
+            throw new SchedulingException("That stylist cannot perform this service.");
+        }
+
+        var stylistsToCheck = request.PreferredEmployeeId is > 0
+            ? new List<long> { request.PreferredEmployeeId.Value }
+            : eligible;
+        if (stylistsToCheck.Count == 0)
+        {
+            throw new SchedulingException("No stylist is available for this service.");
+        }
+
+        var stillOpen = false;
+        foreach (var employeeId in stylistsToCheck)
+        {
+            var free = await EmployeeAvailabilityLoader.GetFreeWindowsAsync(
+                _context,
+                customer.TenantId,
+                branch.BranchId,
+                employeeId,
+                request.AppointmentDate,
+                excludedAppointmentServiceId: null,
+                cancellationToken);
+            if (AvailabilityMath.Fits(free, preferredStart!.Value, preferredEnd!.Value))
+            {
+                stillOpen = true;
+                break;
+            }
+        }
+
+        if (!stillOpen)
+        {
+            throw new SchedulingConflictException(
+                "That time is no longer available. Choose another time.");
+        }
 
         var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
         if (notes is { Length: > 1000 })
@@ -182,24 +245,25 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
         var appointment = new Appointment
         {
             TenantId = customer.TenantId,
-            BranchId = customer.BranchId,
+            BranchId = branch.BranchId,
             CustomerId = customer.CustomerId,
             AppointmentDate = request.AppointmentDate,
             Status = AppointmentStatus.Pending,
             Notes = notes
         };
         _context.Appointments.Add(appointment);
-        AddStatusHistory(appointment, null, AppointmentStatus.Pending, "Requested from the customer app");
+        AddStatusHistory(appointment, null, AppointmentStatus.Pending, "Requested from the customer app. The time is not reserved.");
 
         var line = new AppointmentService
         {
             TenantId = customer.TenantId,
-            BranchId = customer.BranchId,
+            BranchId = branch.BranchId,
             Appointment = appointment,
             ServiceId = service.ServiceId,
             DurationMinutes = service.DurationMinutes,
             UnitPrice = service.Price,
             Sequence = 1,
+            PreferredEmployeeId = request.PreferredEmployeeId is > 0 ? request.PreferredEmployeeId : null,
             PreferredStartTime = preferredStart,
             PreferredEndTime = preferredEnd
         };
@@ -207,6 +271,30 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
         _context.AppointmentServices.Add(line);
         await _context.SaveChangesAsync(cancellationToken);
         return await MapLoadedAppointmentAsync(appointment, cancellationToken);
+    }
+
+    private async Task<List<long>> EligibleStylistIdsAsync(
+        long tenantId,
+        long branchId,
+        long serviceId,
+        CancellationToken cancellationToken)
+    {
+        return await (
+            from skill in _context.EmployeeServices.IgnoreQueryFilters().AsNoTracking()
+            join employee in _context.Employees.IgnoreQueryFilters().AsNoTracking()
+                on skill.EmployeeId equals employee.EmployeeId
+            where skill.TenantId == tenantId &&
+                  skill.BranchId == branchId &&
+                  skill.ServiceId == serviceId &&
+                  skill.IsActive &&
+                  !skill.IsDeleted &&
+                  employee.TenantId == tenantId &&
+                  employee.BranchId == branchId &&
+                  employee.IsActive &&
+                  !employee.IsDeleted &&
+                  employee.IsCustomerVisible
+            select employee.EmployeeId
+        ).Distinct().ToListAsync(cancellationToken);
     }
 
     private async Task<Customer> RequireSignedInCustomerAsync(CancellationToken cancellationToken)
@@ -457,7 +545,8 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
             cancellationToken);
 
         var freeWindows = await EmployeeAvailabilityLoader.GetFreeWindowsAsync(
-            _context,
+                _context,
+                appointment.TenantId,
             appointment.BranchId,
             request.EmployeeId,
             appointment.AppointmentDate,

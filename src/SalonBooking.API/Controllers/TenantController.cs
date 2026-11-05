@@ -20,8 +20,6 @@ public class TenantController : ControllerBase
         _tenantService = tenantService;
     }
 
-    // Tenant provisioning stays closed until a platform administrator
-    // exists outside this tenant-scoped API.
     [HttpPost]
     [RequiresPermission(PermissionCatalog.TenantsManage)]
     public async Task<IActionResult> Create(CreateTenantRequest request)

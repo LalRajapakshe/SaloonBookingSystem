@@ -66,6 +66,9 @@ public class EmployeeService : IEmployeeService
                 Address = request.Address,
                 HireDate = request.HireDate,
                 Designation = request.Designation,
+                Specialisation = Trimmed(request.Specialisation, 150),
+                ProfessionalDescription = Trimmed(request.ProfessionalDescription, 1000),
+                IsCustomerVisible = request.IsCustomerVisible,
                 Salary = request.Salary,
             };
 
@@ -203,6 +206,9 @@ public async Task<EmployeeResponse> UpdateAsync(
     employee.Address = request.Address;
     employee.HireDate = request.HireDate;
     employee.Designation = request.Designation;
+    employee.Specialisation = Trimmed(request.Specialisation, 150);
+    employee.ProfessionalDescription = Trimmed(request.ProfessionalDescription, 1000);
+    employee.IsCustomerVisible = request.IsCustomerVisible;
     employee.Salary = request.Salary;
     employee.IsActive = request.IsActive;
     //employee.Remarks = request.Remarks;
@@ -213,6 +219,17 @@ public async Task<EmployeeResponse> UpdateAsync(
     await _context.SaveChangesAsync();
 
     return EmployeeResponse.From(employee);
+}
+
+private static string? Trimmed(string? value, int max)
+{
+    var trimmed = value?.Trim();
+    if (string.IsNullOrEmpty(trimmed))
+    {
+        return null;
+    }
+
+    return trimmed.Length <= max ? trimmed : trimmed[..max];
 }
 
 private Task<bool> MobileExistsAsync(

@@ -28,6 +28,14 @@ public class Employee : TenantEntity
 
     public string? Designation { get; set; }
 
+    public string? Specialisation { get; set; }
+
+    public string? ProfessionalDescription { get; set; }
+
+    public string? PhotoPath { get; set; }
+
+    public bool IsCustomerVisible { get; set; }
+
     public decimal Salary { get; set; }
 
     public Branch Branch { get; set; } = null!;

@@ -14,6 +14,11 @@ public class AppointmentService : TenantEntity
 
     public long? EmployeeId { get; set; }
 
+    /// <summary>
+    /// Stylist the customer asked for. This is not an assignment and does not reserve the time.
+    /// </summary>
+    public long? PreferredEmployeeId { get; set; }
+
     public DateTime? StartTime { get; set; }
 
     public DateTime? EndTime { get; set; }

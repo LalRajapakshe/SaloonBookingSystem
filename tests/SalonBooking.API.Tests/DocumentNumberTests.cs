@@ -175,7 +175,8 @@ public sealed class DocumentNumberTests : IAsyncLifetime, IDisposable
             BusinessName = "Lumiere",
             SubscriptionPlan = SubscriptionPlan.Trial,
             SubscriptionStartDate = DateTime.UtcNow,
-            SubscriptionEndDate = DateTime.UtcNow.AddYears(1)
+            SubscriptionEndDate = DateTime.UtcNow.AddYears(1),
+            MaxBranches = 5
         };
         database.Tenants.Add(tenant);
         await database.SaveChangesAsync();
@@ -212,5 +213,7 @@ public sealed class DocumentNumberTests : IAsyncLifetime, IDisposable
         public long? EmployeeId => null;
 
         public long? CustomerId => null;
+
+        public bool IsPlatformAdministrator => true;
     }
 }

@@ -16,6 +16,8 @@ public class AppointmentServiceConfiguration : IEntityTypeConfiguration<Appointm
         builder.Property(x => x.Notes)
             .HasMaxLength(1000);
 
+        builder.HasIndex(x => x.PreferredEmployeeId);
+
         builder.Property(x => x.RowVersion)
             .IsConcurrencyToken();
 

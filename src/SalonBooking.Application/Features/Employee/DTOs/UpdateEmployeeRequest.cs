@@ -24,6 +24,12 @@ public class UpdateEmployeeRequest
 
     public string? Designation { get; set; }
 
+    public string? Specialisation { get; set; }
+
+    public string? ProfessionalDescription { get; set; }
+
+    public bool IsCustomerVisible { get; set; }
+
     public decimal Salary { get; set; }
     
     public bool IsActive { get; set; }

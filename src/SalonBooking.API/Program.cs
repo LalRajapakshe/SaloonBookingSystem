@@ -62,6 +62,12 @@ builder.Services.AddScoped<IDocumentNumberService, DocumentNumberService>();
 builder.Services.Configure<SalonBooking.Infrastructure.Storage.CustomerPhotoOptions>(
     builder.Configuration.GetSection(SalonBooking.Infrastructure.Storage.CustomerPhotoOptions.SectionName));
 builder.Services.AddScoped<ICustomerPhotoService, SalonBooking.Infrastructure.Storage.CustomerPhotoService>();
+builder.Services.Configure<SalonBooking.Infrastructure.Storage.CataloguePhotoOptions>(
+    builder.Configuration.GetSection(SalonBooking.Infrastructure.Storage.CataloguePhotoOptions.SectionName));
+builder.Services.AddScoped<SalonBooking.Infrastructure.Storage.CatalogueFileStore>();
+builder.Services.AddScoped<SalonBooking.Infrastructure.Services.CatalogueImageAdminService>();
+builder.Services.AddScoped<ICustomerCatalogueService, CustomerCatalogueService>();
+builder.Services.AddScoped<IQualificationAdminService, QualificationAdminService>();
 builder.Services.AddScoped<ItenantService, TenantService>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 
@@ -152,7 +158,11 @@ if (builder.Environment.IsDevelopment())
     {
         options.AddPolicy("FlutterWeb", policy =>
         {
-            policy.WithOrigins("http://localhost:8090")
+            policy.WithOrigins(
+                    "http://localhost:8090",
+                    "http://localhost:8091",
+                    "http://127.0.0.1:8090",
+                    "http://127.0.0.1:8091")
                 .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .WithHeaders("Authorization", "Content-Type", "Accept");
         });

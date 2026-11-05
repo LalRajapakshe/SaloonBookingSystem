@@ -34,5 +34,8 @@ public class CreateBranchRequestValidator : AbstractValidator<CreateBranchReques
 
         RuleFor(x => x.ManagerName)
             .MaximumLength(100);
+
+        RuleFor(x => x.Highlight)
+            .MaximumLength(150);
     }
 }

@@ -7,12 +7,34 @@ namespace SalonBooking.Infrastructure.Scheduling;
 
 internal static class EmployeeAvailabilityLoader
 {
-    public static async Task<IReadOnlyList<TimeRange>> GetFreeWindowsAsync(
+    public static Task<IReadOnlyList<TimeRange>> GetFreeWindowsAsync(
         SalonBookingDbContext context,
+        long tenantId,
         long branchId,
         long employeeId,
         DateOnly date,
         long? excludedAppointmentServiceId,
+        CancellationToken cancellationToken)
+    {
+        return GetWindowsAsync(
+            context,
+            tenantId,
+            branchId,
+            employeeId,
+            date,
+            excludedAppointmentServiceId,
+            subtractBookings: true,
+            cancellationToken);
+    }
+
+    public static async Task<IReadOnlyList<TimeRange>> GetWindowsAsync(
+        SalonBookingDbContext context,
+        long tenantId,
+        long branchId,
+        long employeeId,
+        DateOnly date,
+        long? excludedAppointmentServiceId,
+        bool subtractBookings,
         CancellationToken cancellationToken)
     {
         var dayStart = date.ToDateTime(TimeOnly.MinValue);
@@ -20,7 +42,10 @@ internal static class EmployeeAvailabilityLoader
         var dayOfWeek = (byte)date.DayOfWeek;
 
         var segments = await context.StaffSchedules
+            .IgnoreQueryFilters()
             .Where(segment =>
+                segment.TenantId == tenantId &&
+                !segment.IsDeleted &&
                 segment.EmployeeId == employeeId &&
                 segment.BranchId == branchId &&
                 segment.DayOfWeek == dayOfWeek &&
@@ -42,7 +67,10 @@ internal static class EmployeeAvailabilityLoader
             .ToList();
 
         var leave = await context.StaffLeaves
+            .IgnoreQueryFilters()
             .Where(item =>
+                item.TenantId == tenantId &&
+                !item.IsDeleted &&
                 item.EmployeeId == employeeId &&
                 item.BranchId == branchId &&
                 item.Status == LeaveStatus.Approved &&
@@ -55,8 +83,13 @@ internal static class EmployeeAvailabilityLoader
             item.StartDateTime < dayStart ? dayStart : item.StartDateTime,
             item.EndDateTime > dayEnd ? dayEnd : item.EndDateTime)));
 
+        if (subtractBookings)
+        {
         var bookings = await context.AppointmentServices
+            .IgnoreQueryFilters()
             .Where(line =>
+                line.TenantId == tenantId &&
+                !line.IsDeleted &&
                 line.EmployeeId == employeeId &&
                 line.BranchId == branchId &&
                 !line.IsCancelled &&
@@ -71,6 +104,7 @@ internal static class EmployeeAvailabilityLoader
         blocks.AddRange(bookings.Select(line => new TimeRange(
             line.StartTime!.Value,
             line.EndTime!.Value)));
+        }
 
         return AvailabilityMath.Subtract(working, blocks);
     }

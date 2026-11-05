@@ -60,6 +60,7 @@ public sealed class AvailabilityQueryService : IAvailabilityQueryService
         {
             var free = await EmployeeAvailabilityLoader.GetFreeWindowsAsync(
                 _context,
+                tenantId,
                 branchId,
                 employee.EmployeeId,
                 request.Date,

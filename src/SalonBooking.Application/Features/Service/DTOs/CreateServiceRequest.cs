@@ -18,4 +18,8 @@ public class CreateServiceRequest
 
     public decimal CommissionPercentage { get; set; }
 
+    public bool IsCustomerVisible { get; set; }
+
+    public bool IsPopular { get; set; }
+
 }

@@ -87,7 +87,7 @@ public static class AccessControlBootstrap
 
         await EnsureRoleAsync(context, tenantId, PermissionCatalog.AdminRoleCode, "Admin", "Tenant administrator", PermissionCatalog.StaffCodes, permissions, fillMissing: true, cancellationToken);
         await EnsureRoleAsync(context, tenantId, PermissionCatalog.StaffRoleCode, "Staff", "Salon staff", PermissionCatalog.OperationalCodes, permissions, fillMissing: false, cancellationToken);
-        await EnsureRoleAsync(context, tenantId, PermissionCatalog.CustomerRoleCode, "Customer", "Customer account", PermissionCatalog.CustomerCodes, permissions, fillMissing: false, cancellationToken);
+        await EnsureRoleAsync(context, tenantId, PermissionCatalog.CustomerRoleCode, "Customer", "Customer account", PermissionCatalog.CustomerCodes, permissions, fillMissing: true, cancellationToken);
     }
 
     public static async Task AssignLegacyRoleAsync(

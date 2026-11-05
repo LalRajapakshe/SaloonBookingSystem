@@ -43,6 +43,10 @@ public class JwtTokenService : IJwtTokenService
         }
 
         claims.Add(new Claim("UserCategory", user.UserCategory.ToString()));
+        if (user.IsPlatformAdministrator)
+        {
+            claims.Add(new Claim("PlatformAdmin", "true"));
+        }
 
         if (user.EmployeeId is > 0)
         {

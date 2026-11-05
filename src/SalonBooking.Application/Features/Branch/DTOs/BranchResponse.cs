@@ -25,6 +25,12 @@ public class BranchResponse
     public string? ManagerName { get; set; }
 
     public bool IsHeadOffice { get; set; }
+
+    public string? Highlight { get; set; }
+
+    public string? PhotoPath { get; set; }
+
+    public bool IsCustomerVisible { get; set; }
 }
 
 

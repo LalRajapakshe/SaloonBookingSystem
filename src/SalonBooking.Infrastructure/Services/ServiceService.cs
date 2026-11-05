@@ -73,6 +73,8 @@ public class ServiceService : IServiceService
                 Price = request.Price,
                 Cost = request.Cost,
                 CommissionPercentage = request.CommissionPercentage,
+                IsCustomerVisible = request.IsCustomerVisible,
+                IsPopular = request.IsPopular
             };
 
             _context.Services.Add(service);
@@ -217,6 +219,8 @@ public async Task<ServiceResponse> UpdateAsync(
     service.Cost = request.Cost;
     service.CommissionPercentage = request.CommissionPercentage;
     service.IsActive = request.IsActive;
+    service.IsCustomerVisible = request.IsCustomerVisible;
+    service.IsPopular = request.IsPopular;
     //service.TenantId = request.TenantId;
     service.BranchId = branchId;
     service.ServiceCategoryId = request.ServiceCategoryId; 

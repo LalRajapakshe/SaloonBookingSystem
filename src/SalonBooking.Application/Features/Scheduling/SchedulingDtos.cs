@@ -19,6 +19,10 @@ public sealed class CreateOwnAppointmentRequest
 {
     public long ServiceId { get; set; }
 
+    public long BranchId { get; set; }
+
+    public long? PreferredEmployeeId { get; set; }
+
     public DateOnly AppointmentDate { get; set; }
 
     public DateTime? PreferredStartTime { get; set; }

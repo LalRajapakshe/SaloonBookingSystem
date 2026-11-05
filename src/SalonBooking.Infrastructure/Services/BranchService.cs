@@ -26,24 +26,38 @@ public class BranchService : IBranchService
     }
     public async Task<BranchResponse> CreateAsync(CreateBranchRequest request)
     {
-        var tenantId = _currentUserService.RequireTenantId();
-        if (_currentUserService.BranchId is > 0)
+        if (!_currentUserService.IsPlatformAdministrator)
         {
             throw new UnauthorizedAccessException(
-                "You cannot create a branch outside your branch scope.");
+                "Only a system administrator can create a branch.");
         }
 
+        var tenantId = request.TenantId > 0
+            ? request.TenantId
+            : _currentUserService.RequireTenantId();
         var tenant = await _context.Tenants
-            .FirstOrDefaultAsync(item => item.TenantId == tenantId);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(item =>
+                item.TenantId == tenantId &&
+                item.IsActive &&
+                !item.IsDeleted);
         if (tenant == null)
             throw new KeyNotFoundException();
+
+        var branchCount = await _context.Branches
+            .IgnoreQueryFilters()
+            .CountAsync(item => item.TenantId == tenantId && !item.IsDeleted);
+        if (tenant.MaxBranches > 0 && branchCount >= tenant.MaxBranches)
+        {
+            throw new IdentityException("This salon has reached its branch limit.");
+        }
 
         return await _numbers.ExecuteAsync(async () =>
         {
             var branch = new Branch
             {
                 BranchCode = await _numbers.NextCodeAsync(tenantId, DocSeriesKind.Branch),
-                BranchName = request.BranchName,
+                BranchName = request.BranchName.Trim(),
                 AddressLine1 = request.AddressLine1,
                 AddressLine2 = request.AddressLine2,
                 City = request.City,
@@ -51,6 +65,8 @@ public class BranchService : IBranchService
                 Email = request.Email,
                 ManagerName = request.ManagerName,
                 IsHeadOffice = request.IsHeadOffice,
+                Highlight = CleanHighlight(request.Highlight),
+                IsCustomerVisible = request.IsCustomerVisible,
                 TenantId = tenantId
             };
             _context.Branches.Add(branch);
@@ -69,6 +85,9 @@ public class BranchService : IBranchService
                 Email = branch.Email,
                 ManagerName = branch.ManagerName,
                 IsHeadOffice = branch.IsHeadOffice,
+                Highlight = branch.Highlight,
+                PhotoPath = branch.PhotoPath,
+                IsCustomerVisible = branch.IsCustomerVisible,
                 IsActive = branch.IsActive
             };
         });
@@ -139,6 +158,9 @@ public class BranchService : IBranchService
         Email = c.Email,
         ManagerName = c.ManagerName,
         IsHeadOffice = c.IsHeadOffice,
+        Highlight = c.Highlight,
+        PhotoPath = c.PhotoPath,
+        IsCustomerVisible = c.IsCustomerVisible,
         IsActive = c.IsActive
     }).ToList();
 
@@ -183,6 +205,9 @@ public class BranchService : IBranchService
             Email = c.Email,
             ManagerName = c.ManagerName,
             IsHeadOffice = c.IsHeadOffice,
+            Highlight = c.Highlight,
+            PhotoPath = c.PhotoPath,
+            IsCustomerVisible = c.IsCustomerVisible,
             IsActive = c.IsActive
         })
         .FirstOrDefaultAsync();
@@ -206,6 +231,8 @@ public class BranchService : IBranchService
         branch.Email = request.Email;
         branch.ManagerName = request.ManagerName;
         branch.IsHeadOffice = request.IsHeadOffice;
+        branch.Highlight = CleanHighlight(request.Highlight);
+        branch.IsCustomerVisible = request.IsCustomerVisible;
         branch.IsActive = request.IsActive;
 
         await _context.SaveChangesAsync();
@@ -245,7 +272,21 @@ public class BranchService : IBranchService
             Email = branch.Email,
             ManagerName = branch.ManagerName,
             IsHeadOffice = branch.IsHeadOffice,
+            Highlight = branch.Highlight,
+            PhotoPath = branch.PhotoPath,
+            IsCustomerVisible = branch.IsCustomerVisible,
             IsActive = branch.IsActive
         };
+    }
+
+    private static string? CleanHighlight(string? value)
+    {
+        var trimmed = value?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return null;
+        }
+
+        return trimmed.Length <= 150 ? trimmed : trimmed[..150];
     }
 }

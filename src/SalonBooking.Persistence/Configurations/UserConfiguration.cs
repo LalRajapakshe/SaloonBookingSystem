@@ -23,6 +23,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.UserCategory)
             .HasDefaultValue(UserCategory.General);
 
+        builder.Property(x => x.IsPlatformAdministrator)
+            .HasDefaultValue(false);
+
         builder.Property(x => x.PasswordHash)
             .IsRequired();
 

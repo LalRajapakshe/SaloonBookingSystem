@@ -44,6 +44,9 @@ public class CurrentUserService : ICurrentUserService
 
     public long? CustomerId => TryGetInt64("CustomerId");
 
+    public bool IsPlatformAdministrator =>
+        string.Equals(TryGet("PlatformAdmin"), "true", StringComparison.OrdinalIgnoreCase);
+
     private string? TryGet(string claimType)
     {
         return _httpContextAccessor.HttpContext?.User?.FindFirst(claimType)?.Value;

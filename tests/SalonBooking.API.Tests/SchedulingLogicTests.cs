@@ -281,6 +281,11 @@ public class SchedulingLogicTests
             Date = AppointmentDate
         });
         Assert.Contains(listed.Items, item => item.AppointmentId == created.AppointmentId);
+
+        await using var salonWideDb = scenario.CreateContext(scenario.TenantId, null);
+        var salonWide = scenario.Workflow(salonWideDb, scenario.TenantId, null);
+        var unscoped = await salonWide.GetAppointmentsAsync(new AppointmentQueryRequest());
+        Assert.Contains(unscoped.Items, item => item.AppointmentId == created.AppointmentId);
     }
 
     private static DateTime At(int hour, int minute = 0) =>

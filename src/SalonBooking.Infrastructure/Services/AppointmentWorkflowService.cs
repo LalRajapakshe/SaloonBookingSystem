@@ -29,12 +29,21 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
         CancellationToken cancellationToken = default)
     {
         var tenantId = _currentUser.RequireTenantId();
-        var branchId = _currentUser.ResolveBranchId(request.BranchId);
+        // A branch user stays on that branch. A salon-wide user with no branch
+        // on the token can list every appointment in the tenant, or one branch
+        // when the request names it.
+        long? branchId = _currentUser.BranchId is > 0 || request.BranchId > 0
+            ? _currentUser.ResolveBranchId(request.BranchId)
+            : null;
         var page = request.Page < 1 ? 1 : request.Page;
         var pageSize = request.PageSize is < 1 or > 100 ? 20 : request.PageSize;
 
         var query = _context.Appointments
-            .Where(appointment => appointment.TenantId == tenantId && appointment.BranchId == branchId);
+            .Where(appointment => appointment.TenantId == tenantId);
+        if (branchId is > 0)
+        {
+            query = query.Where(appointment => appointment.BranchId == branchId);
+        }
 
         if (request.Date is DateOnly date)
         {

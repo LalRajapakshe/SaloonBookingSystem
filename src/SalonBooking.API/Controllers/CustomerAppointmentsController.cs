@@ -26,6 +26,13 @@ public class CustomerAppointmentsController : ControllerBase
         return Ok(await _appointments.ListOwnServicesAsync(cancellationToken));
     }
 
+    [HttpGet]
+    [RequiresPermission(PermissionCatalog.CustomerAppointmentsRead)]
+    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.ListOwnAppointmentsAsync(cancellationToken));
+    }
+
     [HttpPost]
     [RequiresPermission(PermissionCatalog.CustomerAppointmentsCreate)]
     public async Task<IActionResult> Create(
@@ -33,5 +40,12 @@ public class CustomerAppointmentsController : ControllerBase
         CancellationToken cancellationToken)
     {
         return Ok(await _appointments.CreateOwnAppointmentAsync(request, cancellationToken));
+    }
+
+    [HttpPost("{id:long}/cancellation-request")]
+    [RequiresPermission(PermissionCatalog.CustomerAppointmentsCreate)]
+    public async Task<IActionResult> RequestCancellation(long id, CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.RequestOwnCancellationAsync(id, cancellationToken));
     }
 }

@@ -11,7 +11,7 @@ using SalonBooking.Persistence.Context;
 
 namespace SalonBooking.Infrastructure.Services;
 
-public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
+public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowService
 {
     private readonly SalonBookingDbContext _context;
     private readonly ICurrentUserService _currentUser;
@@ -72,6 +72,7 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
         }
 
         var pageItems = mapped.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        await AttachCancellationRequestsAsync(pageItems, cancellationToken);
         return new PagedResult<AppointmentResponse>
         {
             Items = pageItems,
@@ -261,7 +262,7 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
             Notes = notes
         };
         _context.Appointments.Add(appointment);
-        AddStatusHistory(appointment, null, AppointmentStatus.Pending, "Requested from the customer app. The time is not reserved.");
+        AddStatusHistory(appointment, null, AppointmentStatus.Pending, CustomerBookingRequest.RequestedReason);
 
         var line = new AppointmentService
         {
@@ -280,6 +281,354 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
         _context.AppointmentServices.Add(line);
         await _context.SaveChangesAsync(cancellationToken);
         return await MapLoadedAppointmentAsync(appointment, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CustomerOwnAppointmentResponse>> ListOwnAppointmentsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await RequireSignedInCustomerAsync(cancellationToken);
+        var appointments = await _context.Appointments
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(appointment =>
+                appointment.CustomerId == customer.CustomerId &&
+                appointment.TenantId == customer.TenantId &&
+                !appointment.IsDeleted)
+            .Include(appointment => appointment.Branch)
+            .Include(appointment => appointment.StatusHistory)
+            .Include(appointment => appointment.AppointmentServices)
+                .ThenInclude(line => line.Service)
+            .Include(appointment => appointment.AppointmentServices)
+                .ThenInclude(line => line.Employee)
+            .OrderByDescending(appointment => appointment.AppointmentDate)
+            .ThenByDescending(appointment => appointment.AppointmentId)
+            .ToListAsync(cancellationToken);
+
+        return appointments.Select(MapOwnAppointment).ToList();
+    }
+
+    public async Task<CustomerOwnAppointmentResponse> RequestOwnCancellationAsync(
+        long appointmentId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await RequireSignedInCustomerAsync(cancellationToken);
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+        var appointment = await LockOwnAppointmentAsync(appointmentId, customer, cancellationToken);
+        if (appointment.Status is AppointmentStatus.Completed or AppointmentStatus.Cancelled or AppointmentStatus.NoShow)
+        {
+            throw new SchedulingException("This appointment can no longer be cancelled.");
+        }
+
+        if (appointment.AppointmentDate < SalonTime.Today())
+        {
+            throw new SchedulingException("This appointment date has passed and can no longer be cancelled.");
+        }
+
+        if (CancellationState(appointment.StatusHistory) == CustomerCancellationRequest.Requested)
+        {
+            throw new SchedulingException("A cancellation request is already waiting for the salon.");
+        }
+
+        AddStatusHistory(
+            appointment,
+            appointment.Status,
+            appointment.Status,
+            CustomerCancellationRequest.RequestedReason);
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return await LoadOwnAppointmentAsync(appointment.AppointmentId, customer, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CancellationRequestNotificationResponse>> ListStaffNotificationsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var tenantId = _currentUser.RequireTenantId();
+        long? branchId = _currentUser.BranchId is > 0 ? _currentUser.BranchId : null;
+        var historyRows = await (
+            from history in _context.AppointmentStatusHistories.AsNoTracking()
+            join appointment in _context.Appointments.AsNoTracking()
+                on history.AppointmentId equals appointment.AppointmentId
+            where appointment.TenantId == tenantId &&
+                  (branchId == null || appointment.BranchId == branchId.Value) &&
+                  (history.Reason == CustomerCancellationRequest.RequestedReason ||
+                   history.Reason == CustomerBookingRequest.RequestedReason)
+            select appointment.AppointmentId).Distinct().ToListAsync(cancellationToken);
+        if (historyRows.Count == 0) return [];
+
+        var appointments = await _context.Appointments
+            .AsNoTracking()
+            .Where(appointment => historyRows.Contains(appointment.AppointmentId))
+            .Include(appointment => appointment.Customer)
+            .Include(appointment => appointment.Branch)
+            .Include(appointment => appointment.StatusHistory)
+            .Include(appointment => appointment.AppointmentServices)
+                .ThenInclude(line => line.Service)
+            .ToListAsync(cancellationToken);
+
+        var stylistIds = appointments
+            .SelectMany(appointment => appointment.AppointmentServices)
+            .Where(line => line.PreferredEmployeeId is > 0)
+            .Select(line => line.PreferredEmployeeId!.Value)
+            .Distinct()
+            .ToList();
+        var stylistNames = stylistIds.Count == 0
+            ? new Dictionary<long, string>()
+            : await _context.Employees.AsNoTracking()
+                .Where(employee => stylistIds.Contains(employee.EmployeeId))
+                .ToDictionaryAsync(employee => employee.EmployeeId, employee => employee.FirstName, cancellationToken);
+
+        var notices = new List<CancellationRequestNotificationResponse>();
+        foreach (var appointment in appointments)
+        {
+            var cancellation = CancellationState(appointment.StatusHistory);
+            if (cancellation == CustomerCancellationRequest.Requested)
+            {
+                notices.Add(DescribeNotice(
+                    appointment,
+                    "CancellationRequest",
+                    stylistNames,
+                    cancellationRequestedAt: true));
+                continue;
+            }
+
+            if (!IsOpenBooking(appointment.Status)) continue;
+            if (!appointment.StatusHistory.Any(item =>
+                    !item.IsDeleted && item.Reason == CustomerBookingRequest.RequestedReason))
+            {
+                continue;
+            }
+
+            var openLines = OpenLines(appointment);
+            if (openLines.Count == 0 || openLines.All(line =>
+                    SchedulingStateCalculator.IsFullyScheduled(line.EmployeeId, line.StartTime, line.EndTime, false)))
+            {
+                continue;
+            }
+            notices.Add(DescribeNotice(appointment, CustomerBookingRequest.NotificationType, stylistNames, cancellationRequestedAt: false));
+        }
+
+        return notices
+            .OrderByDescending(item => item.NotificationType == CustomerBookingRequest.NotificationType)
+            .ThenByDescending(item => item.RequestedAt)
+            .ToList();
+    }
+
+    private static bool IsOpenBooking(AppointmentStatus status) =>
+        status is AppointmentStatus.Pending
+            or AppointmentStatus.Confirmed
+            or AppointmentStatus.CheckedIn
+            or AppointmentStatus.InProgress;
+
+    private static List<AppointmentService> OpenLines(Appointment appointment) =>
+        appointment.AppointmentServices
+            .Where(line => !line.IsDeleted && !line.IsCancelled)
+            .OrderBy(line => line.Sequence)
+            .ToList();
+
+    private static CancellationRequestNotificationResponse DescribeNotice(
+        Appointment appointment,
+        string notificationType,
+        IReadOnlyDictionary<long, string> stylistNames,
+        bool cancellationRequestedAt)
+    {
+        var lines = OpenLines(appointment);
+        var names = lines
+            .Select(line => line.Service?.ServiceName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .ToList();
+        var when = notificationType == CustomerBookingRequest.NotificationType
+            ? lines.Select(line => line.PreferredStartTime).FirstOrDefault(time => time != null)
+            : lines.Select(line => line.StartTime ?? line.PreferredStartTime).FirstOrDefault(time => time != null);
+        var requestedAt = cancellationRequestedAt
+            ? appointment.StatusHistory
+                .Where(item =>
+                    !item.IsDeleted &&
+                    item.OldStatus == item.NewStatus &&
+                    item.Reason == CustomerCancellationRequest.RequestedReason)
+                .OrderByDescending(item => item.ChangedAt)
+                .ThenByDescending(item => item.AppointmentStatusHistoryId)
+                .Select(item => item.ChangedAt)
+                .FirstOrDefault()
+            : appointment.CreatedDate;
+        var preferredId = lines.Select(line => line.PreferredEmployeeId).FirstOrDefault(id => id is > 0);
+        var customerName = $"{appointment.Customer?.FirstName} {appointment.Customer?.LastName}".Trim();
+        var scheduledCount = lines.Count(line => SchedulingStateCalculator.IsFullyScheduled(
+            line.EmployeeId, line.StartTime, line.EndTime, line.IsCancelled));
+        var allocation = scheduledCount == 0
+            ? CustomerBookingRequest.Unallocated
+            : scheduledCount == lines.Count
+                ? SchedulingStateCalculator.Scheduled
+                : CustomerBookingRequest.PartiallyScheduled;
+        return new CancellationRequestNotificationResponse
+        {
+            NotificationType = notificationType,
+            AppointmentId = appointment.AppointmentId,
+            CustomerName = string.IsNullOrWhiteSpace(customerName)
+                ? $"Customer {appointment.CustomerId}"
+                : customerName,
+            ServiceNames = names,
+            ServiceName = names.Count == 0 ? string.Empty : string.Join(", ", names),
+            AppointmentDate = appointment.AppointmentDate,
+            AppointmentTime = when,
+            BranchId = appointment.BranchId,
+            BranchName = appointment.Branch?.BranchName ?? string.Empty,
+            RequestedAt = requestedAt,
+            RequestState = notificationType == CustomerBookingRequest.NotificationType
+                ? allocation
+                : CustomerCancellationRequest.Requested,
+            PreferredStylistName = preferredId is > 0 && stylistNames.TryGetValue(preferredId.Value, out var stylist)
+                ? stylist
+                : null,
+            AllocationState = allocation
+        };
+    }
+
+    public async Task<AppointmentResponse> DeclineCancellationRequestAsync(
+        long appointmentId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+        var appointment = await LockStaffAppointmentAsync(appointmentId, cancellationToken);
+        if (CancellationState(appointment.StatusHistory) != CustomerCancellationRequest.Requested)
+        {
+            throw new SchedulingException("There is no cancellation request to decline.");
+        }
+
+        AddStatusHistory(
+            appointment,
+            appointment.Status,
+            appointment.Status,
+            CustomerCancellationRequest.DeclinedReason);
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return await MapLoadedAppointmentAsync(appointment, cancellationToken);
+    }
+
+    public async Task<AppointmentResponse> ApproveCancellationRequestAsync(
+        long appointmentId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+        var appointment = await LockStaffAppointmentAsync(appointmentId, cancellationToken);
+        if (appointment.Status is AppointmentStatus.Completed or AppointmentStatus.Cancelled or AppointmentStatus.NoShow)
+        {
+            throw new SchedulingException("This appointment can no longer be cancelled.");
+        }
+
+        if (CancellationState(appointment.StatusHistory) != CustomerCancellationRequest.Requested)
+        {
+            throw new SchedulingException("There is no cancellation request to approve.");
+        }
+
+        var previous = appointment.Status;
+        appointment.Status = AppointmentStatus.Cancelled;
+        appointment.CancelledAt = DateTime.UtcNow;
+        appointment.CancelledByUserId = _currentUser.UserId;
+        appointment.CancellationReason = CustomerCancellationRequest.ApprovedReason;
+        AddStatusHistory(appointment, previous, AppointmentStatus.Cancelled, CustomerCancellationRequest.ApprovedReason);
+
+        var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
+        foreach (var line in lines.Where(line => !line.IsCancelled))
+        {
+            line.IsCancelled = true;
+            TouchRowVersion(line);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return await MapLoadedAppointmentAsync(appointment, cancellationToken);
+    }
+
+    private async Task<CustomerOwnAppointmentResponse> LoadOwnAppointmentAsync(
+        long appointmentId,
+        Customer customer,
+        CancellationToken cancellationToken)
+    {
+        var appointment = await _context.Appointments
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Include(item => item.Branch)
+            .Include(item => item.StatusHistory)
+            .Include(item => item.AppointmentServices)
+                .ThenInclude(line => line.Service)
+            .Include(item => item.AppointmentServices)
+                .ThenInclude(line => line.Employee)
+            .FirstAsync(item =>
+                item.AppointmentId == appointmentId &&
+                item.CustomerId == customer.CustomerId &&
+                !item.IsDeleted,
+                cancellationToken);
+        return MapOwnAppointment(appointment);
+    }
+
+    private static CustomerOwnAppointmentResponse MapOwnAppointment(Appointment appointment)
+    {
+        var lines = appointment.AppointmentServices
+            .Where(item => !item.IsDeleted)
+            .OrderBy(item => item.Sequence)
+            .ToList();
+        var line = lines.FirstOrDefault();
+        var names = lines
+            .Select(item => item.Service?.ServiceName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .ToList();
+        return new CustomerOwnAppointmentResponse
+        {
+            AppointmentId = appointment.AppointmentId,
+            BranchId = appointment.BranchId,
+            BranchName = appointment.Branch?.BranchName ?? string.Empty,
+            ServiceId = line?.ServiceId ?? 0,
+            ServiceName = names.Count == 0 ? string.Empty : string.Join(", ", names),
+            ServiceNames = names,
+            AppointmentDate = appointment.AppointmentDate,
+            PreferredStartTime = line?.PreferredStartTime,
+            ScheduledStartTime = line?.StartTime,
+            StylistName = lines.Select(item => item.Employee?.FirstName).FirstOrDefault(name => !string.IsNullOrWhiteSpace(name)),
+            Status = appointment.Status.ToString(),
+            CancellationRequest = CancellationState(appointment.StatusHistory),
+            CreatedDate = appointment.CreatedDate
+        };
+    }
+
+    private async Task AttachCancellationRequestsAsync(
+        List<AppointmentResponse> appointments,
+        CancellationToken cancellationToken)
+    {
+        var ids = appointments.Select(item => item.AppointmentId).ToList();
+        if (ids.Count == 0) return;
+        var history = await _context.AppointmentStatusHistories
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(item => ids.Contains(item.AppointmentId) && !item.IsDeleted)
+            .Select(item => new
+            {
+                item.AppointmentId,
+                item.AppointmentStatusHistoryId,
+                item.ChangedAt,
+                item.OldStatus,
+                item.NewStatus,
+                item.Reason
+            })
+            .ToListAsync(cancellationToken);
+        foreach (var appointment in appointments)
+        {
+            appointment.CancellationRequest = CustomerCancellationRequest.FromHistory(
+                history.Where(item => item.AppointmentId == appointment.AppointmentId)
+                    .Select(item => new CancellationHistoryEntry(
+                        item.ChangedAt,
+                        item.AppointmentStatusHistoryId,
+                        item.OldStatus,
+                        item.NewStatus,
+                        item.Reason)));
+        }
     }
 
     private async Task<List<long>> EligibleStylistIdsAsync(
@@ -304,6 +653,70 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
                   employee.IsCustomerVisible
             select employee.EmployeeId
         ).Distinct().ToListAsync(cancellationToken);
+    }
+
+    private static string CancellationState(IEnumerable<AppointmentStatusHistory> history) =>
+        CustomerCancellationRequest.FromHistory(history.Select(item => new CancellationHistoryEntry(
+            item.ChangedAt,
+            item.AppointmentStatusHistoryId,
+            item.OldStatus,
+            item.NewStatus,
+            item.Reason)));
+
+    private async Task LockAppointmentRowAsync(long appointmentId, CancellationToken cancellationToken)
+    {
+        var stamp = DateTime.UtcNow;
+        var updated = await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE Appointments SET ModifiedDate = {stamp} WHERE AppointmentId = {appointmentId} AND IsDeleted = 0",
+            cancellationToken);
+        if (updated == 0)
+        {
+            throw new SchedulingException("The appointment could not be found.");
+        }
+    }
+
+    private async Task<Appointment> LockOwnAppointmentAsync(
+        long appointmentId,
+        Customer customer,
+        CancellationToken cancellationToken)
+    {
+        var visible = await _context.Appointments
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .AnyAsync(item =>
+                item.AppointmentId == appointmentId &&
+                item.CustomerId == customer.CustomerId &&
+                item.TenantId == customer.TenantId &&
+                !item.IsDeleted,
+                cancellationToken);
+        if (!visible)
+        {
+            throw new SchedulingException("The appointment could not be found.");
+        }
+
+        await LockAppointmentRowAsync(appointmentId, cancellationToken);
+        _context.ChangeTracker.Clear();
+        return await _context.Appointments
+            .IgnoreQueryFilters()
+            .Include(item => item.StatusHistory)
+            .FirstAsync(item =>
+                item.AppointmentId == appointmentId &&
+                item.CustomerId == customer.CustomerId &&
+                !item.IsDeleted,
+                cancellationToken);
+    }
+
+    private async Task<Appointment> LockStaffAppointmentAsync(
+        long appointmentId,
+        CancellationToken cancellationToken)
+    {
+        var existing = await RequireAppointmentAsync(appointmentId, cancellationToken);
+        await LockAppointmentRowAsync(existing.AppointmentId, cancellationToken);
+        _context.ChangeTracker.Clear();
+        return await _context.Appointments
+            .IgnoreQueryFilters()
+            .Include(item => item.StatusHistory)
+            .FirstAsync(item => item.AppointmentId == existing.AppointmentId && !item.IsDeleted, cancellationToken);
     }
 
     private async Task<Customer> RequireSignedInCustomerAsync(CancellationToken cancellationToken)
@@ -782,6 +1195,7 @@ public sealed class AppointmentWorkflowService : IAppointmentWorkflowService
             CancelledAt = appointment.CancelledAt,
             CancelledByUserId = appointment.CancelledByUserId,
             CancellationReason = appointment.CancellationReason,
+            CancellationRequest = CancellationState(statusHistory),
             Services = mappedLines,
             StatusHistory = statusHistory
                 .OrderBy(item => item.ChangedAt)

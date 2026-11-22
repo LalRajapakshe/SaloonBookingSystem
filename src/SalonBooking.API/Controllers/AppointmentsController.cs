@@ -26,6 +26,28 @@ public class AppointmentsController : ControllerBase
         return Ok(await _appointments.GetAppointmentsAsync(request, cancellationToken));
     }
 
+    [HttpGet("cancellation-requests")]
+    [HttpGet("notifications")]
+    [RequiresPermission(PermissionCatalog.AppointmentsRead)]
+    public async Task<IActionResult> Notifications(CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.ListStaffNotificationsAsync(cancellationToken));
+    }
+
+    [HttpGet("{id:long}/allocation-recommendations")]
+    [RequiresPermission(PermissionCatalog.AppointmentsRead)]
+    public async Task<IActionResult> RecommendAllocation(long id, CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.RecommendAllocationAsync(id, cancellationToken));
+    }
+
+    [HttpPost("{id:long}/allocate")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
+    public async Task<IActionResult> Allocate(long id, ApplyAllocationRequest request, CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.ApplyAllocationAsync(id, request, cancellationToken));
+    }
+
     [HttpGet("{id:long}")]
     [RequiresPermission(PermissionCatalog.AppointmentsRead)]
     public async Task<IActionResult> GetById(long id, CancellationToken cancellationToken)
@@ -65,6 +87,20 @@ public class AppointmentsController : ControllerBase
         CancellationToken cancellationToken)
     {
         return Ok(await _appointments.CancelAppointmentAsync(id, request, cancellationToken));
+    }
+
+    [HttpPost("{id:long}/decline-cancellation")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
+    public async Task<IActionResult> DeclineCancellation(long id, CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.DeclineCancellationRequestAsync(id, cancellationToken));
+    }
+
+    [HttpPost("{id:long}/approve-cancellation")]
+    [RequiresPermission(PermissionCatalog.AppointmentsManage)]
+    public async Task<IActionResult> ApproveCancellation(long id, CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.ApproveCancellationRequestAsync(id, cancellationToken));
     }
 
     [HttpPost("{appointmentId:long}/services")]

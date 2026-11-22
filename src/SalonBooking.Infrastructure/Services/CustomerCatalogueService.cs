@@ -205,13 +205,16 @@ public sealed class CustomerCatalogueService : ICustomerCatalogueService
             }
         }
 
+        var slots = merged.Values
+            .Where(slot => !SalonTime.IsPastSlot(date, slot.StartTime))
+            .ToList();
         return new CustomerAvailabilityResponse
         {
             BranchId = branchId,
             ServiceId = serviceId,
             EmployeeId = employeeId is > 0 ? employeeId : null,
             DurationMinutes = service.DurationMinutes,
-            Slots = merged.Values.ToList()
+            Slots = slots
         };
     }
 

@@ -96,6 +96,10 @@ public class BranchService : IBranchService
   public async Task<PagedResult<BranchResponse>> GetBranchAsync(BranchQueryRequest request)
    {
     var query = _context.Branches.Where(c => c.IsActive).AsQueryable();
+    if (_currentUserService.BranchId is long authorizedBranchId and > 0)
+    {
+        query = query.Where(branch => branch.BranchId == authorizedBranchId);
+    }
     if (!string.IsNullOrWhiteSpace(request.Search))
     {
     query = query.Where(c =>

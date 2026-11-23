@@ -1,4 +1,5 @@
 using SalonBooking.Domain.Common;
+using SalonBooking.Domain.Enums;
 
 namespace SalonBooking.Domain.Entities;
 
@@ -38,6 +39,8 @@ public class AppointmentService : TenantEntity
 
     public bool IsCancelled { get; set; }
 
+    public ServiceLineStatus LineStatus { get; set; } = ServiceLineStatus.Pending;
+
     public byte[] RowVersion { get; set; } = [];
 
     public Appointment Appointment { get; set; } = null!;
@@ -50,4 +53,7 @@ public class AppointmentService : TenantEntity
 
     public ICollection<AppointmentServiceScheduleHistory> ScheduleHistory { get; set; }
         = new List<AppointmentServiceScheduleHistory>();
+
+    public ICollection<AppointmentServiceStatusHistory> StatusHistory { get; set; }
+        = new List<AppointmentServiceStatusHistory>();
 }

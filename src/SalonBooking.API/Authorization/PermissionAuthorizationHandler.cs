@@ -7,7 +7,7 @@ using SalonBooking.Persistence.Context;
 
 namespace SalonBooking.API.Authorization;
 
-public sealed class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
+public sealed class PermissionAuthorizationHandler : IAuthorizationHandler
 {
     private readonly SalonBookingDbContext _context;
     private readonly ICurrentUserService _currentUser;
@@ -18,13 +18,33 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
         _currentUser = currentUser;
     }
 
-    protected override async Task HandleRequirementAsync(
-        AuthorizationHandlerContext context,
-        PermissionRequirement requirement)
+    public async Task HandleAsync(AuthorizationHandlerContext context)
+    {
+        foreach (var requirement in context.Requirements)
+        {
+            if (requirement is PermissionRequirement single && await PermitsAsync(single.Permission))
+            {
+                context.Succeed(requirement);
+            }
+            else if (requirement is AnyPermissionRequirement any)
+            {
+                foreach (var permission in any.Permissions)
+                {
+                    if (await PermitsAsync(permission))
+                    {
+                        context.Succeed(requirement);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private async Task<bool> PermitsAsync(string permission)
     {
         if (_currentUser.UserId is not > 0)
         {
-            return;
+            return false;
         }
 
         var user = await _context.Users
@@ -36,56 +56,40 @@ public sealed class PermissionAuthorizationHandler : AuthorizationHandler<Permis
 
         if (user is not { IsActive: true })
         {
-            return;
+            return false;
         }
 
-        if (requirement.Permission == PermissionCatalog.PlatformManage)
+        if (permission == PermissionCatalog.PlatformManage)
         {
-            if (user.IsPlatformAdministrator)
-            {
-                context.Succeed(requirement);
-            }
-
-            return;
+            return user.IsPlatformAdministrator;
         }
 
-        if (user.IsPlatformAdministrator && PermissionCatalog.IsStaffCode(requirement.Permission))
+        if (user.IsPlatformAdministrator && PermissionCatalog.IsStaffCode(permission))
         {
-            context.Succeed(requirement);
-            return;
+            return true;
         }
 
         if (user.UserCategory == UserCategory.Customer)
         {
-            if (PermissionCatalog.CustomerCodes.Contains(requirement.Permission))
-            {
-                context.Succeed(requirement);
-            }
-
-            return;
+            return PermissionCatalog.CustomerCodes.Contains(permission);
         }
 
-        var granted = await (
+        return await (
             from userRole in _context.UserRoles.AsNoTracking()
             join role in _context.Roles.IgnoreQueryFilters().AsNoTracking()
                 on userRole.RoleId equals role.RoleId
             join rolePermission in _context.RolePermissions.AsNoTracking()
                 on role.RoleId equals rolePermission.RoleId
-            join permission in _context.Permissions.AsNoTracking()
-                on rolePermission.PermissionId equals permission.PermissionId
+            join permissionRow in _context.Permissions.AsNoTracking()
+                on rolePermission.PermissionId equals permissionRow.PermissionId
             where userRole.UserId == _currentUser.UserId &&
                   role.TenantId == user.TenantId &&
                   role.IsActive &&
                   !role.IsDeleted &&
-                  permission.IsActive &&
-                  !permission.IsDeleted &&
-                  permission.PermissionCode == requirement.Permission
-            select permission.PermissionId
+                  permissionRow.IsActive &&
+                  !permissionRow.IsDeleted &&
+                  permissionRow.PermissionCode == permission
+            select permissionRow.PermissionId
         ).AnyAsync();
-
-        if (granted)
-        {
-            context.Succeed(requirement);
-        }
     }
 }

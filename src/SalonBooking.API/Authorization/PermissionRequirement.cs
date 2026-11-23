@@ -21,3 +21,30 @@ public sealed class RequiresPermissionAttribute : AuthorizeAttribute
         Policy = Prefix + permission;
     }
 }
+
+public sealed class AnyPermissionRequirement : IAuthorizationRequirement
+{
+    public AnyPermissionRequirement(IReadOnlyList<string> permissions)
+    {
+        Permissions = permissions;
+    }
+
+    public IReadOnlyList<string> Permissions { get; }
+}
+
+public sealed class RequiresAnyPermissionAttribute : AuthorizeAttribute
+{
+    public const string NotificationsPolicy = "permission-any:notifications";
+    public const string LineProgressPolicy = "permission-any:line-progress";
+    public const string LineHistoryPolicy = "permission-any:line-history";
+
+    public RequiresAnyPermissionAttribute()
+    {
+        Policy = NotificationsPolicy;
+    }
+
+    public RequiresAnyPermissionAttribute(string policy)
+    {
+        Policy = policy;
+    }
+}

@@ -112,7 +112,15 @@ public sealed partial class AppointmentWorkflowService
             var line = appointment.AppointmentServices.FirstOrDefault(candidate =>
                 candidate.AppointmentServiceId == item.AppointmentServiceId && !candidate.IsDeleted);
             if (line == null) throw new SchedulingException("A service on this allocation could not be found.");
-            if (line.IsCancelled) throw new SchedulingException("A cancelled service line cannot be scheduled.");
+            if (line.IsCancelled || line.LineStatus == ServiceLineStatus.Cancelled)
+            {
+                throw new SchedulingException("A cancelled service line cannot be scheduled.");
+            }
+
+            if (line.LineStatus == ServiceLineStatus.Completed)
+            {
+                throw new SchedulingException("A completed service cannot be reassigned.");
+            }
             ApplyRowVersion(line, item.RowVersion);
             if (item.EndTime <= item.StartTime)
             {
@@ -167,9 +175,12 @@ public sealed partial class AppointmentWorkflowService
                 throw new SchedulingConflictException("The selected slot is no longer available.");
             }
 
+            var previousEmployeeId = line.EmployeeId;
+            var previousStatus = line.LineStatus;
             line.EmployeeId = item.EmployeeId;
             line.StartTime = item.StartTime;
             line.EndTime = item.EndTime;
+            RecordAssignment(line, previousEmployeeId, previousStatus, null);
             TouchRowVersion(line);
             placed.Add((item.EmployeeId, item.StartTime, item.EndTime));
         }

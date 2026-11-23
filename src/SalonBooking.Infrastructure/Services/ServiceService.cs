@@ -88,6 +88,10 @@ public class ServiceService : IServiceService
     var query = _context.Services.Where(s => s.IsActive &&
     s.TenantId == _currentUserService.TenantId &&
         !s.IsDeleted).AsQueryable();
+    if (_currentUserService.BranchId is long serviceBranchId and > 0)
+    {
+        query = query.Where(service => service.BranchId == serviceBranchId);
+    }
     if (!string.IsNullOrWhiteSpace(request.Search))
     {
     query = query.Where(s =>

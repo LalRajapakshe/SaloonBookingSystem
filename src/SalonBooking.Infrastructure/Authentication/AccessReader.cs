@@ -46,9 +46,17 @@ internal static class AccessReader
             throw new UnauthorizedAccessException("Sign in is required.");
         }
 
+        if (currentUser.IsPlatformAdministrator)
+        {
+            return;
+        }
+
         var access = await ReadAccessAsync(context, callerId, currentUser.RequireTenantId(), cancellationToken);
         var held = access.PermissionCodes.ToHashSet(StringComparer.Ordinal);
-        if (permissionCodes.Any(code => PermissionCatalog.IsStaffCode(code) && !held.Contains(code)))
+        if (permissionCodes.Any(code =>
+                PermissionCatalog.IsStaffCode(code) &&
+                !PermissionCatalog.CanDelegateWithoutHolding(code) &&
+                !held.Contains(code)))
         {
             throw new IdentityException("You cannot grant a permission that you do not have.");
         }

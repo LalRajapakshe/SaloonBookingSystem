@@ -121,6 +121,49 @@ public class IsolationTests
         Assert.Contains(customers!.Items, item => item.CustomerId == _factory.CustomerA1Id);
         Assert.DoesNotContain(customers.Items, item => item.CustomerId == _factory.CustomerA2Id);
         Assert.All(customers.Items, item => Assert.Equal(_factory.BranchA1Id, item.BranchId));
+
+        var employees = await client.GetFromJsonAsync<Page<BranchScopedItem>>("/api/Employees");
+        Assert.Contains(employees!.Items, item => item.EmployeeId == _factory.EmployeeA1Id);
+        Assert.DoesNotContain(employees.Items, item => item.EmployeeId == _factory.EmployeeA2Id);
+        Assert.All(employees.Items, item => Assert.Equal(_factory.BranchA1Id, item.BranchId));
+
+        var services = await client.GetFromJsonAsync<Page<BranchScopedItem>>("/api/Services");
+        Assert.Contains(services!.Items, item => item.ServiceId == _factory.ServiceA1Id);
+        Assert.DoesNotContain(services.Items, item => item.ServiceId == _factory.ServiceA2Id);
+        Assert.All(services.Items, item => Assert.Equal(_factory.BranchA1Id, item.BranchId));
+
+        var branches = await client.GetFromJsonAsync<Page<BranchItem>>("/api/Branch");
+        Assert.Contains(branches!.Items, item => item.BranchId == _factory.BranchA1Id);
+        Assert.DoesNotContain(branches.Items, item => item.BranchId == _factory.BranchA2Id);
+        Assert.DoesNotContain(branches.Items, item => item.BranchId == _factory.BranchB1Id);
+        Assert.All(branches.Items, item => Assert.Equal(_factory.BranchA1Id, item.BranchId));
+    }
+
+    [Fact]
+    public async Task Null_branch_user_lists_every_branch_in_the_tenant_and_not_another_tenant()
+    {
+        using var client = await _factory.CreateAuthenticatedClientAsync(ApiFactory.TenantUserAName);
+
+        var customers = await client.GetFromJsonAsync<Page<CustomerItem>>("/api/Customers");
+        Assert.Contains(customers!.Items, item => item.CustomerId == _factory.CustomerA1Id);
+        Assert.Contains(customers.Items, item => item.CustomerId == _factory.CustomerA2Id);
+        Assert.DoesNotContain(customers.Items, item => item.CustomerId == _factory.CustomerB1Id);
+
+        var employees = await client.GetFromJsonAsync<Page<BranchScopedItem>>("/api/Employees");
+        Assert.Contains(employees!.Items, item => item.EmployeeId == _factory.EmployeeA1Id);
+        Assert.Contains(employees.Items, item => item.EmployeeId == _factory.EmployeeA2Id);
+        Assert.DoesNotContain(employees.Items, item => item.EmployeeId == _factory.EmployeeB1Id);
+
+        var services = await client.GetFromJsonAsync<Page<BranchScopedItem>>("/api/Services");
+        Assert.Contains(services!.Items, item => item.ServiceId == _factory.ServiceA1Id);
+        Assert.Contains(services.Items, item => item.ServiceId == _factory.ServiceA2Id);
+        Assert.DoesNotContain(services.Items, item => item.ServiceId == _factory.ServiceB1Id);
+
+        var branches = await client.GetFromJsonAsync<Page<BranchItem>>("/api/Branch");
+        Assert.Contains(branches!.Items, item => item.BranchId == _factory.BranchA1Id);
+        Assert.Contains(branches.Items, item => item.BranchId == _factory.BranchA2Id);
+        Assert.DoesNotContain(branches.Items, item => item.BranchId == _factory.BranchB1Id);
+        Assert.All(branches.Items, item => Assert.Equal(_factory.TenantAId, item.TenantId));
     }
 
     [Fact]
@@ -358,5 +401,12 @@ public class IsolationTests
     {
         public long EmployeeId { get; set; }
         public long ServiceId { get; set; }
+    }
+
+    private sealed class BranchScopedItem
+    {
+        public long EmployeeId { get; set; }
+        public long ServiceId { get; set; }
+        public long BranchId { get; set; }
     }
 }

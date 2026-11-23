@@ -128,6 +128,13 @@ namespace SalonBooking.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LineStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasDefaultValue("Pending");
+
                     b.Property<long?>("ModifiedBy")
                         .HasColumnType("bigint");
 
@@ -185,6 +192,8 @@ namespace SalonBooking.Persistence.Migrations
 
                     b.ToTable("AppointmentServices", t =>
                         {
+                            t.HasCheckConstraint("CK_AppointmentService_LineStatus", "[LineStatus] IN ('Pending', 'Assigned', 'InProgress', 'Completed', 'Cancelled')");
+
                             t.HasCheckConstraint("CK_AppointmentService_PreferredShape", "([PreferredStartTime] IS NULL AND [PreferredEndTime] IS NULL) OR ([PreferredStartTime] IS NOT NULL AND [PreferredEndTime] IS NOT NULL AND [PreferredEndTime] > [PreferredStartTime])");
 
                             t.HasCheckConstraint("CK_AppointmentService_ScheduleShape", "([StartTime] IS NULL AND [EndTime] IS NULL) OR ([EmployeeId] IS NOT NULL AND [StartTime] IS NOT NULL AND [EndTime] IS NOT NULL AND [EndTime] > [StartTime])");
@@ -267,6 +276,84 @@ namespace SalonBooking.Persistence.Migrations
                     b.HasIndex("AppointmentServiceId", "ChangedAt");
 
                     b.ToTable("AppointmentServiceScheduleHistories");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.AppointmentServiceStatusHistory", b =>
+                {
+                    b.Property<long>("AppointmentServiceStatusHistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AppointmentServiceStatusHistoryId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<long>("AppointmentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("AppointmentServiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("ChangedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("EmployeeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("OldStatus")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("AppointmentServiceStatusHistoryId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("AppointmentId", "ChangedAt");
+
+                    b.HasIndex("AppointmentServiceId", "ChangedAt");
+
+                    b.ToTable("AppointmentServiceStatusHistories");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.AppointmentStatusHistory", b =>
@@ -1555,6 +1642,40 @@ namespace SalonBooking.Persistence.Migrations
                     b.Navigation("OldEmployee");
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.AppointmentServiceStatusHistory", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.AppointmentService", "AppointmentService")
+                        .WithMany("StatusHistory")
+                        .HasForeignKey("AppointmentServiceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.User", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("AppointmentService");
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("ChangedByUser");
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.AppointmentStatusHistory", b =>
                 {
                     b.HasOne("SalonBooking.Domain.Entities.Appointment", "Appointment")
@@ -1816,6 +1937,8 @@ namespace SalonBooking.Persistence.Migrations
             modelBuilder.Entity("SalonBooking.Domain.Entities.AppointmentService", b =>
                 {
                     b.Navigation("ScheduleHistory");
+
+                    b.Navigation("StatusHistory");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Employee", b =>

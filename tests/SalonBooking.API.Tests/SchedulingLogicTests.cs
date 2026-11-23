@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SalonBooking.Application.Common;
 using SalonBooking.Application.Features.Scheduling;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Security;
 using SalonBooking.Domain.Entities;
 using SalonBooking.Domain.Enums;
 using SalonBooking.Infrastructure.Services;
@@ -339,14 +340,28 @@ public class SchedulingLogicTests
             new SchedulingUser(scenario.OtherTenantId, null, UserCategory.Customer, scenario.CustomerId));
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => otherTenant.ListOwnAppointmentsAsync());
 
+        var tooEarly = await Assert.ThrowsAsync<SchedulingException>(() =>
+            scenario.Appointments.ChangeStatusAsync(
+                created.AppointmentId,
+                new ChangeAppointmentStatusRequest { Status = "Confirmed", Reason = "Slot assigned" }));
+        Assert.Contains("Allocate every service", tooEarly.Message, StringComparison.OrdinalIgnoreCase);
+
+        var advice = await scenario.Appointments.RecommendAllocationAsync(created.AppointmentId);
+        await scenario.Appointments.ApplyAllocationAsync(created.AppointmentId, ToApply(advice.Options[0]));
+        var stillPending = await scenario.Appointments.GetAppointmentAsync(created.AppointmentId);
+        Assert.Equal(nameof(AppointmentStatus.Pending), stillPending.Status);
+
         var confirmed = await scenario.Appointments.ChangeStatusAsync(
             created.AppointmentId,
             new ChangeAppointmentStatusRequest { Status = "Confirmed", Reason = "Slot assigned" });
         Assert.Equal(nameof(AppointmentStatus.Confirmed), confirmed.Status);
+        Assert.NotNull(Assert.Single(confirmed.Services).StartTime);
 
         owner.Db.ChangeTracker.Clear();
         var after = Assert.Single(await owner.Service.ListOwnAppointmentsAsync());
         Assert.Equal(nameof(AppointmentStatus.Confirmed), after.Status);
+        Assert.NotNull(after.ScheduledStartTime);
+        Assert.NotNull(after.PreferredStartTime);
     }
 
     [Fact]
@@ -434,6 +449,178 @@ public class SchedulingLogicTests
             new CancelAppointmentRequest { Reason = "Salon closed" });
         Assert.Equal(nameof(AppointmentStatus.Cancelled), staffCancelled.Status);
         Assert.Equal(CustomerCancellationRequest.None, staffCancelled.CancellationRequest);
+    }
+
+    [Fact]
+    public async Task Approved_cancellation_closes_open_lines_and_preserves_completed_work()
+    {
+        await using var scenario = await SchedulingScenario.CreateAsync();
+        await PrepareCustomerBookingAsync(scenario);
+        var owner = CustomerWorkflow(scenario, scenario.CustomerId);
+        var day = UpcomingDate();
+        var openVisit = await owner.Service.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = day,
+            PreferredStartTime = On(day, 9)
+        });
+        await owner.Service.RequestOwnCancellationAsync(openVisit.AppointmentId);
+
+        var approved = await scenario.Appointments.ApproveCancellationRequestAsync(openVisit.AppointmentId);
+        var openLine = Assert.Single(approved.Services);
+        Assert.Equal(nameof(AppointmentStatus.Cancelled), approved.Status);
+        Assert.Equal(nameof(ServiceLineStatus.Cancelled), openLine.LineStatus);
+        Assert.True(openLine.IsCancelled);
+        var openHistory = await scenario.Db.AppointmentServiceStatusHistories
+            .Where(item => item.AppointmentServiceId == openLine.AppointmentServiceId)
+            .OrderBy(item => item.AppointmentServiceStatusHistoryId)
+            .ToListAsync();
+        var cancelRow = Assert.Single(openHistory, item => item.Action == "Cancel");
+        Assert.Equal(ServiceLineStatus.Pending, cancelRow.OldStatus);
+        Assert.Equal(ServiceLineStatus.Cancelled, cancelRow.NewStatus);
+        Assert.Equal(CustomerCancellationRequest.ApprovedReason, cancelRow.Reason);
+
+        var repeated = await Assert.ThrowsAsync<SchedulingException>(() =>
+            scenario.Appointments.ApproveCancellationRequestAsync(openVisit.AppointmentId));
+        Assert.Contains("no longer", repeated.Message, StringComparison.OrdinalIgnoreCase);
+
+        var mixed = await owner.Service.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = day,
+            PreferredStartTime = On(day, 11),
+            PreferredEmployeeId = scenario.EmployeeId
+        });
+        await scenario.Appointments.AddServiceAsync(
+            mixed.AppointmentId,
+            new AddAppointmentServiceRequest { ServiceId = scenario.ServiceId });
+        var advice = await scenario.Appointments.RecommendAllocationAsync(mixed.AppointmentId);
+        await scenario.Appointments.ApplyAllocationAsync(mixed.AppointmentId, ToApply(advice.Options[0]));
+        var confirmed = await scenario.Appointments.ChangeStatusAsync(
+            mixed.AppointmentId,
+            new ChangeAppointmentStatusRequest { Status = "Confirmed" });
+        await owner.Service.RequestOwnCancellationAsync(mixed.AppointmentId);
+        var desk = await scenario.GrantUserAsync(
+            null,
+            scenario.BranchId,
+            PermissionCatalog.AppointmentsLinesProgress);
+        await using var deskDb = scenario.CreateContext(desk);
+        var deskService = new AppointmentWorkflowService(deskDb, desk);
+        var finished = confirmed.Services[0];
+        var stillOpen = confirmed.Services[1];
+        await deskService.ProgressOwnServiceAsync(
+            mixed.AppointmentId,
+            finished.AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Start" });
+        await deskService.ProgressOwnServiceAsync(
+            mixed.AppointmentId,
+            finished.AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Finish" });
+        scenario.Db.ChangeTracker.Clear();
+
+        var closed = await scenario.Appointments.ApproveCancellationRequestAsync(mixed.AppointmentId);
+        var kept = Assert.Single(closed.Services, line => line.AppointmentServiceId == finished.AppointmentServiceId);
+        var stopped = Assert.Single(closed.Services, line => line.AppointmentServiceId == stillOpen.AppointmentServiceId);
+        Assert.Equal(nameof(ServiceLineStatus.Completed), kept.LineStatus);
+        Assert.False(kept.IsCancelled);
+        Assert.Equal(finished.EmployeeId, kept.EmployeeId);
+        Assert.Equal(nameof(ServiceLineStatus.Cancelled), stopped.LineStatus);
+        Assert.True(stopped.IsCancelled);
+        Assert.DoesNotContain(
+            await scenario.Db.AppointmentServiceStatusHistories
+                .Where(item => item.AppointmentServiceId == kept.AppointmentServiceId)
+                .ToListAsync(),
+            item => item.Action == "Cancel");
+        var stoppedHistory = Assert.Single(
+            await scenario.Db.AppointmentServiceStatusHistories
+                .Where(item => item.AppointmentServiceId == stopped.AppointmentServiceId && item.Action == "Cancel")
+                .ToListAsync());
+        Assert.Equal(ServiceLineStatus.Assigned, stoppedHistory.OldStatus);
+        Assert.Equal(ServiceLineStatus.Cancelled, stoppedHistory.NewStatus);
+
+        var done = await owner.Service.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = day,
+            PreferredStartTime = On(day, 15),
+            PreferredEmployeeId = scenario.EmployeeId
+        });
+        var doneAdvice = await scenario.Appointments.RecommendAllocationAsync(done.AppointmentId);
+        await scenario.Appointments.ApplyAllocationAsync(done.AppointmentId, ToApply(doneAdvice.Options[0]));
+        var doneConfirmed = await scenario.Appointments.ChangeStatusAsync(
+            done.AppointmentId,
+            new ChangeAppointmentStatusRequest { Status = "Confirmed" });
+        await owner.Service.RequestOwnCancellationAsync(done.AppointmentId);
+        var onlyLine = Assert.Single(doneConfirmed.Services);
+        await deskService.ProgressOwnServiceAsync(
+            done.AppointmentId,
+            onlyLine.AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Start" });
+        await deskService.ProgressOwnServiceAsync(
+            done.AppointmentId,
+            onlyLine.AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Finish" });
+        scenario.Db.ChangeTracker.Clear();
+
+        var finishedVisit = await scenario.Appointments.GetAppointmentAsync(done.AppointmentId);
+        Assert.Equal(nameof(AppointmentStatus.Completed), finishedVisit.Status);
+        var cannotApprove = await Assert.ThrowsAsync<SchedulingException>(() =>
+            scenario.Appointments.ApproveCancellationRequestAsync(done.AppointmentId));
+        Assert.Contains("no longer", cannotApprove.Message, StringComparison.OrdinalIgnoreCase);
+        var preserved = Assert.Single((await scenario.Appointments.GetAppointmentAsync(done.AppointmentId)).Services);
+        Assert.Equal(nameof(ServiceLineStatus.Completed), preserved.LineStatus);
+        Assert.False(preserved.IsCancelled);
+        Assert.Equal(nameof(AppointmentStatus.Completed), (await scenario.Appointments.GetAppointmentAsync(done.AppointmentId)).Status);
+    }
+
+    [Fact]
+    public async Task Cancellation_approval_rejects_invalid_visits_and_other_branches()
+    {
+        await using var scenario = await SchedulingScenario.CreateAsync();
+        await PrepareCustomerBookingAsync(scenario);
+        var owner = CustomerWorkflow(scenario, scenario.CustomerId);
+        var day = UpcomingDate();
+        var created = await owner.Service.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = day,
+            PreferredStartTime = On(day, 16)
+        });
+
+        var missing = await Assert.ThrowsAsync<SchedulingException>(() =>
+            scenario.Appointments.ApproveCancellationRequestAsync(created.AppointmentId));
+        Assert.Contains("no cancellation request", missing.Message, StringComparison.OrdinalIgnoreCase);
+
+        await owner.Service.RequestOwnCancellationAsync(created.AppointmentId);
+        await using var otherBranchDb = scenario.CreateContext(scenario.TenantId, scenario.OtherBranchId);
+        var otherBranch = scenario.Workflow(otherBranchDb, scenario.TenantId, scenario.OtherBranchId);
+        var blockedBranch = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            otherBranch.ApproveCancellationRequestAsync(created.AppointmentId));
+        Assert.Contains("another branch", blockedBranch.Message, StringComparison.OrdinalIgnoreCase);
+
+        await using var otherTenantDb = scenario.CreateContext(scenario.OtherTenantId, null);
+        var otherTenant = scenario.Workflow(otherTenantDb, scenario.OtherTenantId, null);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            otherTenant.ApproveCancellationRequestAsync(created.AppointmentId));
+
+        var sameBranch = scenario.Workflow(
+            scenario.CreateContext(scenario.TenantId, scenario.BranchId),
+            scenario.TenantId,
+            scenario.BranchId);
+        var untouched = await scenario.Appointments.GetAppointmentAsync(created.AppointmentId);
+        Assert.Equal(nameof(AppointmentStatus.Pending), untouched.Status);
+        Assert.Equal(CustomerCancellationRequest.Requested, untouched.CancellationRequest);
+
+        await scenario.Appointments.ChangeStatusAsync(
+            created.AppointmentId,
+            new ChangeAppointmentStatusRequest { Status = "NoShow", Reason = "Customer did not arrive" });
+        var terminal = await Assert.ThrowsAsync<SchedulingException>(() =>
+            sameBranch.ApproveCancellationRequestAsync(created.AppointmentId));
+        Assert.Contains("no longer", terminal.Message, StringComparison.OrdinalIgnoreCase);
+        var noShow = await scenario.Appointments.GetAppointmentAsync(created.AppointmentId);
+        Assert.Equal(nameof(AppointmentStatus.NoShow), noShow.Status);
+        Assert.Equal(nameof(ServiceLineStatus.Cancelled), Assert.Single(noShow.Services).LineStatus);
+        Assert.True(Assert.Single(noShow.Services).IsCancelled);
     }
 
     [Fact]
@@ -556,6 +743,11 @@ public class SchedulingLogicTests
         Assert.DoesNotContain(queue, item => item.AppointmentId == staffVisit.AppointmentId);
         Assert.DoesNotContain("077", notice.CustomerName, StringComparison.Ordinal);
 
+        var bookingsOnly = await scenario.OpenAsAsync(PermissionCatalog.NotificationsBookingsRead);
+        Assert.Empty(await bookingsOnly.ListStaffNotificationsAsync());
+        var cancellationsOnly = await scenario.OpenAsAsync(PermissionCatalog.NotificationsCancellationsRead);
+        Assert.Equal(requested.AppointmentId, Assert.Single(await cancellationsOnly.ListStaffNotificationsAsync()).AppointmentId);
+
         var otherBranch = scenario.Workflow(
             scenario.CreateContext(scenario.TenantId, scenario.OtherBranchId),
             scenario.TenantId,
@@ -611,7 +803,8 @@ public class SchedulingLogicTests
         Assert.Equal(30, best.Lines[0].DurationMinutes);
 
         await scenario.Appointments.ApplyAllocationAsync(created.AppointmentId, ToApply(best));
-        Assert.Empty(await scenario.Appointments.ListStaffNotificationsAsync());
+        var afterAllocation = Assert.Single(await scenario.Appointments.ListStaffNotificationsAsync());
+        Assert.Equal(CustomerBookingRequest.AwaitingConfirmation, afterAllocation.NotificationType);
         var saved = await scenario.Appointments.GetAppointmentAsync(created.AppointmentId);
         Assert.Equal(nameof(AppointmentStatus.Pending), saved.Status);
         Assert.Equal(On(day, 10), Assert.Single(saved.Services).StartTime);
@@ -717,6 +910,412 @@ public class SchedulingLogicTests
         Assert.Equal(45, best.Lines[1].DurationMinutes);
         Assert.Equal(best.Lines[0].EndTime, best.Lines[1].StartTime);
         Assert.Equal(new[] { "Cut", "Colour" }, advice.ServiceNames);
+    }
+
+    [Fact]
+    public async Task Past_pending_requests_stay_out_of_the_notification_queue()
+    {
+        await using var scenario = await SchedulingScenario.CreateAsync();
+        await PrepareCustomerBookingAsync(scenario);
+        var owner = CustomerWorkflow(scenario, scenario.CustomerId);
+        var past = SalonTime.Today().AddDays(-7);
+        var created = await owner.Service.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = past,
+            PreferredStartTime = On(past, 10)
+        });
+
+        Assert.DoesNotContain(
+            await scenario.Appointments.ListStaffNotificationsAsync(),
+            item => item.AppointmentId == created.AppointmentId);
+
+        var advice = await scenario.Appointments.RecommendAllocationAsync(created.AppointmentId);
+        await scenario.Appointments.ApplyAllocationAsync(created.AppointmentId, ToApply(advice.Options[0]));
+        Assert.DoesNotContain(
+            await scenario.Appointments.ListStaffNotificationsAsync(),
+            item => item.AppointmentId == created.AppointmentId &&
+                    item.NotificationType == CustomerBookingRequest.AwaitingConfirmation);
+    }
+
+    [Fact]
+    public async Task Allocated_future_visit_waits_for_confirmation_and_stays_on_one_employee()
+    {
+        await using var scenario = await SchedulingScenario.CreateAsync();
+        await PrepareCustomerBookingAsync(scenario);
+        var owner = CustomerWorkflow(scenario, scenario.CustomerId);
+        var day = UpcomingDate();
+        var created = await owner.Service.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = day,
+            PreferredStartTime = On(day, 11),
+            PreferredEmployeeId = scenario.EmployeeId
+        });
+        await scenario.Appointments.AddServiceAsync(
+            created.AppointmentId,
+            new AddAppointmentServiceRequest { ServiceId = scenario.ServiceId });
+
+        var partial = await Assert.ThrowsAsync<SchedulingException>(() =>
+            scenario.Appointments.ChangeStatusAsync(
+                created.AppointmentId,
+                new ChangeAppointmentStatusRequest { Status = "Confirmed" }));
+        Assert.Contains("Allocate every service", partial.Message, StringComparison.OrdinalIgnoreCase);
+
+        var advice = await scenario.Appointments.RecommendAllocationAsync(created.AppointmentId);
+        var best = advice.Options[0];
+        Assert.Equal(2, best.Lines.Count);
+        await scenario.Appointments.ApplyAllocationAsync(created.AppointmentId, ToApply(best));
+        var allocated = await scenario.Appointments.GetAppointmentAsync(created.AppointmentId);
+        Assert.Equal(nameof(AppointmentStatus.Pending), allocated.Status);
+
+        var waiting = await scenario.Appointments.ListStaffNotificationsAsync();
+        var notice = Assert.Single(waiting, item => item.AppointmentId == created.AppointmentId);
+        Assert.Equal(CustomerBookingRequest.AwaitingConfirmation, notice.NotificationType);
+        Assert.DoesNotContain(waiting, item =>
+            item.AppointmentId == created.AppointmentId &&
+            item.NotificationType == CustomerBookingRequest.NotificationType);
+
+        var confirmed = await scenario.Appointments.ChangeStatusAsync(
+            created.AppointmentId,
+            new ChangeAppointmentStatusRequest { Status = "Confirmed", Reason = "Bridal party confirmed" });
+        Assert.Equal(nameof(AppointmentStatus.Confirmed), confirmed.Status);
+        Assert.DoesNotContain(
+            await scenario.Appointments.ListStaffNotificationsAsync(),
+            item => item.AppointmentId == created.AppointmentId &&
+                    item.NotificationType == CustomerBookingRequest.AwaitingConfirmation);
+
+        await using var stylistDb = scenario.CreateContext(scenario.TenantId, scenario.BranchId);
+        var stylist = new AppointmentWorkflowService(
+            stylistDb,
+            new SchedulingUser(scenario.TenantId, scenario.BranchId, employeeId: scenario.EmployeeId));
+        var mine = await stylist.ListMyAssignedAppointmentsAsync();
+        var own = Assert.Single(mine);
+        Assert.Equal(created.AppointmentId, own.AppointmentId);
+        Assert.All(own.Services, line => Assert.Equal(scenario.EmployeeId, line.EmployeeId));
+        Assert.Equal("Ada Lovelace", own.CustomerName);
+        Assert.All(own.Services, line => Assert.Equal("Cut", line.ServiceName));
+        Assert.All(own.Services, line => Assert.Equal(0, line.UnitPrice));
+        Assert.Empty(own.StatusHistory);
+
+        var beforeStatus = (await scenario.Appointments.GetAppointmentAsync(created.AppointmentId)).Status;
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            stylist.ProgressOwnServiceAsync(
+                created.AppointmentId,
+                own.Services[0].AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Commence" }));
+
+        var stranger = new AppointmentWorkflowService(
+            stylistDb,
+            new SchedulingUser(scenario.TenantId, scenario.BranchId, employeeId: scenario.EmployeeId + 50));
+        Assert.Empty(await stranger.ListMyAssignedAppointmentsAsync());
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            stranger.ProgressOwnServiceAsync(
+                created.AppointmentId,
+                own.Services[0].AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Complete" }));
+        Assert.Equal(beforeStatus, (await scenario.Appointments.GetAppointmentAsync(created.AppointmentId)).Status);
+        await Assert.ThrowsAsync<SchedulingException>(() =>
+            scenario.Appointments.ListMyAssignedAppointmentsAsync());
+
+        await using var otherBranch = scenario.CreateContext(scenario.TenantId, scenario.OtherBranchId);
+        var other = scenario.Workflow(otherBranch, scenario.TenantId, scenario.OtherBranchId);
+        Assert.Empty(await other.ListStaffNotificationsAsync());
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            other.ListStaffNotificationsAsync(branchId: scenario.BranchId));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            scenario.Appointments.ListStaffNotificationsAsync(branchId: 999999));
+    }
+
+    [Fact]
+    public async Task Service_lines_progress_independently_and_keep_history()
+    {
+        await using var scenario = await SchedulingScenario.CreateAsync();
+        await PrepareCustomerBookingAsync(scenario);
+        var owner = CustomerWorkflow(scenario, scenario.CustomerId);
+        var day = UpcomingDate();
+        var created = await owner.Service.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = day,
+            PreferredStartTime = On(day, 11),
+            PreferredEmployeeId = scenario.EmployeeId
+        });
+        await scenario.Appointments.AddServiceAsync(
+            created.AppointmentId,
+            new AddAppointmentServiceRequest { ServiceId = scenario.ServiceId });
+        var advice = await scenario.Appointments.RecommendAllocationAsync(created.AppointmentId);
+        await scenario.Appointments.ApplyAllocationAsync(created.AppointmentId, ToApply(advice.Options[0]));
+        var confirmed = await scenario.Appointments.ChangeStatusAsync(
+            created.AppointmentId,
+            new ChangeAppointmentStatusRequest { Status = "Confirmed" });
+        Assert.Equal(nameof(AppointmentStatus.Confirmed), confirmed.Status);
+        Assert.All(confirmed.Services, line => Assert.Equal(nameof(ServiceLineStatus.Assigned), line.LineStatus));
+
+        var stylistUser = await scenario.GrantUserAsync(
+            scenario.EmployeeId,
+            scenario.BranchId,
+            PermissionCatalog.AppointmentsOwnRead,
+            PermissionCatalog.AppointmentsOwnProgress);
+        await using var stylistDb = scenario.CreateContext(stylistUser);
+        var stylist = new AppointmentWorkflowService(stylistDb, stylistUser);
+        var past = new Appointment
+        {
+            TenantId = scenario.TenantId,
+            BranchId = scenario.BranchId,
+            CustomerId = scenario.CustomerId,
+            AppointmentDate = SalonTime.Today().AddDays(-2),
+            Status = AppointmentStatus.Completed
+        };
+        scenario.Db.Appointments.Add(past);
+        await scenario.Db.SaveChangesAsync();
+        scenario.Db.AppointmentServices.Add(new AppointmentService
+        {
+            TenantId = scenario.TenantId,
+            BranchId = scenario.BranchId,
+            AppointmentId = past.AppointmentId,
+            ServiceId = scenario.ServiceId,
+            DurationMinutes = 30,
+            UnitPrice = 25,
+            Sequence = 1,
+            EmployeeId = scenario.EmployeeId,
+            StartTime = past.AppointmentDate.ToDateTime(new TimeOnly(10, 0)),
+            EndTime = past.AppointmentDate.ToDateTime(new TimeOnly(10, 30)),
+            LineStatus = ServiceLineStatus.Completed,
+            RowVersion = Guid.NewGuid().ToByteArray()
+        });
+        await scenario.Db.SaveChangesAsync();
+        var mine = await stylist.ListMyAssignedAppointmentsAsync();
+        Assert.Contains(mine, item => item.AppointmentId == created.AppointmentId);
+        Assert.Contains(mine, item => item.AppointmentId == past.AppointmentId);
+        var first = confirmed.Services[0];
+        var second = confirmed.Services[1];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            stylist.ProgressOwnServiceAsync(
+                created.AppointmentId,
+                first.AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Commence", Reason = "Customer is seated" }));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            stylist.ProgressOwnServiceAsync(
+                created.AppointmentId,
+                first.AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Complete" }));
+        var desk = await scenario.GrantUserAsync(
+            null,
+            scenario.BranchId,
+            PermissionCatalog.AppointmentsLinesProgress);
+        await using var deskDb = scenario.CreateContext(desk);
+        var deskService = new AppointmentWorkflowService(deskDb, desk);
+        var startedAt = DateTime.UtcNow.AddSeconds(-1);
+        var started = await deskService.ProgressOwnServiceAsync(
+            created.AppointmentId,
+            first.AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Commence", Reason = "Customer is seated" });
+        Assert.Equal(nameof(ServiceLineStatus.InProgress), started.LineStatus);
+        var startedHistory = await deskService.ListLineProgressHistoryAsync(
+            created.AppointmentId,
+            first.AppointmentServiceId);
+        var startRow = Assert.Single(startedHistory, item => item.Action == "Start");
+        Assert.Equal(desk.UserId, startRow.ChangedByUserId);
+        Assert.InRange(startRow.ChangedAt, startedAt, DateTime.UtcNow.AddSeconds(5));
+        scenario.Db.ChangeTracker.Clear();
+        var afterStart = await scenario.Appointments.GetAppointmentAsync(created.AppointmentId);
+        Assert.Equal(nameof(AppointmentStatus.InProgress), afterStart.Status);
+        Assert.Equal(nameof(ServiceLineStatus.Assigned), afterStart.Services[1].LineStatus);
+
+        var finished = await deskService.ProgressOwnServiceAsync(
+            created.AppointmentId,
+            first.AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Complete" });
+        Assert.Equal(nameof(ServiceLineStatus.Completed), finished.LineStatus);
+        scenario.Db.ChangeTracker.Clear();
+        var oneDone = await scenario.Appointments.GetAppointmentAsync(created.AppointmentId);
+        Assert.Equal(nameof(AppointmentStatus.InProgress), oneDone.Status);
+        Assert.Equal(nameof(ServiceLineStatus.Assigned), oneDone.Services[1].LineStatus);
+
+        var outsider = new Employee
+        {
+            TenantId = scenario.TenantId,
+            BranchId = scenario.BranchId,
+            EmployeeCode = "EMP000099",
+            FirstName = "Other",
+            LastName = "Stylist",
+            MobileNo = "0710000099"
+        };
+        scenario.Db.Employees.Add(outsider);
+        await scenario.Db.SaveChangesAsync();
+        var stranger = await scenario.GrantUserAsync(
+            outsider.EmployeeId,
+            scenario.BranchId,
+            PermissionCatalog.AppointmentsOwnProgress);
+        await using var strangerDb = scenario.CreateContext(stranger);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            new AppointmentWorkflowService(strangerDb, stranger).ProgressOwnServiceAsync(
+                created.AppointmentId,
+                second.AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Commence" }));
+
+        var managerOnly = await scenario.GrantUserAsync(
+            null,
+            scenario.BranchId,
+            PermissionCatalog.AppointmentsManage,
+            PermissionCatalog.AppointmentsRead);
+        await using var managerDb = scenario.CreateContext(managerOnly);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            new AppointmentWorkflowService(managerDb, managerOnly).ProgressOwnServiceAsync(
+                created.AppointmentId,
+                second.AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Commence" }));
+
+        var supervisor = await scenario.GrantUserAsync(
+            null,
+            scenario.BranchId,
+            PermissionCatalog.AppointmentsRead,
+            PermissionCatalog.SchedulesRead,
+            PermissionCatalog.AppointmentsLinesProgress);
+        await using var supervisorDb = scenario.CreateContext(supervisor);
+        var supervisorService = new AppointmentWorkflowService(supervisorDb, supervisor);
+        var otherBranchUser = await scenario.GrantUserAsync(
+            null,
+            scenario.OtherBranchId,
+            PermissionCatalog.AppointmentsLinesProgress);
+        await using var otherBranchDb = scenario.CreateContext(otherBranchUser);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            new AppointmentWorkflowService(otherBranchDb, otherBranchUser).ProgressOwnServiceAsync(
+                created.AppointmentId,
+                second.AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Commence" }));
+
+        var otherEmployee = new Employee
+        {
+            TenantId = scenario.TenantId,
+            BranchId = scenario.BranchId,
+            EmployeeCode = "EMP000002",
+            FirstName = "Ada",
+            LastName = "Lovelace",
+            MobileNo = "0710000002"
+        };
+        scenario.Db.Employees.Add(otherEmployee);
+        await scenario.Db.SaveChangesAsync();
+        var capability = scenario.NewCapability();
+        capability.EmployeeId = otherEmployee.EmployeeId;
+        await scenario.Capabilities.AssignAsync(capability);
+        var hours = scenario.Working(new TimeOnly(9, 0), new TimeOnly(18, 0));
+        hours.EmployeeId = otherEmployee.EmployeeId;
+        hours.DayOfWeek = (byte)day.DayOfWeek;
+        await scenario.Schedules.CreateAsync(hours);
+        var beforeReassign = await supervisorService.ListLineProgressHistoryAsync(
+            created.AppointmentId,
+            second.AppointmentServiceId);
+        var assignCount = beforeReassign.Count(item => item.Action == "Assign");
+        scenario.Db.ChangeTracker.Clear();
+        var current = (await scenario.Appointments.GetAppointmentAsync(created.AppointmentId))
+            .Services.Single(line => line.AppointmentServiceId == second.AppointmentServiceId);
+        var move = scenario.Schedule(current.RowVersion, On(day, 16), On(day, 16, 30), "Moved to Ada");
+        move.EmployeeId = otherEmployee.EmployeeId;
+        await scenario.Appointments.ScheduleServiceAsync(
+            created.AppointmentId,
+            second.AppointmentServiceId,
+            move);
+        var afterReassign = await supervisorService.ListLineProgressHistoryAsync(
+            created.AppointmentId,
+            second.AppointmentServiceId);
+        Assert.Equal(assignCount, afterReassign.Count(item => item.Action == "Assign"));
+        Assert.Contains(afterReassign, item => item.Action == "Reassign" && item.EmployeeId == otherEmployee.EmployeeId);
+
+        var stale = await Assert.ThrowsAsync<SchedulingConflictException>(() =>
+            supervisorService.ProgressOwnServiceAsync(
+                created.AppointmentId,
+                second.AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Start", RowVersion = current.RowVersion }));
+        Assert.Contains("changed by someone else", stale.Message, StringComparison.OrdinalIgnoreCase);
+
+        scenario.Db.ChangeTracker.Clear();
+        current = (await scenario.Appointments.GetAppointmentAsync(created.AppointmentId))
+            .Services.Single(line => line.AppointmentServiceId == second.AppointmentServiceId);
+        await using var supervisorAfterConflict = scenario.CreateContext(supervisor);
+        var supervisorRetry = new AppointmentWorkflowService(supervisorAfterConflict, supervisor);
+        var startedBySupervisor = await supervisorRetry.ProgressOwnServiceAsync(
+            created.AppointmentId,
+            second.AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Start", RowVersion = current.RowVersion });
+        Assert.Equal(nameof(ServiceLineStatus.InProgress), startedBySupervisor.LineStatus);
+        var duplicate = await Assert.ThrowsAsync<SchedulingException>(() =>
+            supervisorRetry.ProgressOwnServiceAsync(
+                created.AppointmentId,
+                second.AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Start" }));
+        Assert.Contains("already in progress", duplicate.Message, StringComparison.OrdinalIgnoreCase);
+        var history = await stylist.ListLineProgressHistoryAsync(created.AppointmentId, first.AppointmentServiceId);
+        Assert.Contains(history, item => item.Action == "Start" && item.ChangedByUserId == desk.UserId);
+        Assert.Equal(1, history.Count(item => item.Action == "Start"));
+
+        await supervisorRetry.ProgressOwnServiceAsync(
+            created.AppointmentId,
+            second.AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Finish" });
+        scenario.Db.ChangeTracker.Clear();
+        var done = await scenario.Appointments.GetAppointmentAsync(created.AppointmentId);
+        Assert.Equal(nameof(AppointmentStatus.Completed), done.Status);
+        await using var closedDb = scenario.CreateContext(desk);
+        var restart = await Assert.ThrowsAsync<SchedulingException>(() =>
+            new AppointmentWorkflowService(closedDb, desk).ProgressOwnServiceAsync(
+                created.AppointmentId,
+                first.AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Commence" }));
+        Assert.Contains("closed appointment", restart.Message, StringComparison.OrdinalIgnoreCase);
+
+        var followUp = await owner.Service.CreateOwnAppointmentAsync(new CreateOwnAppointmentRequest
+        {
+            ServiceId = scenario.ServiceId,
+            AppointmentDate = day,
+            PreferredStartTime = On(day, 17),
+            PreferredEmployeeId = scenario.EmployeeId
+        });
+        await scenario.Appointments.AddServiceAsync(
+            followUp.AppointmentId,
+            new AddAppointmentServiceRequest { ServiceId = scenario.ServiceId });
+        var followAdvice = await scenario.Appointments.RecommendAllocationAsync(followUp.AppointmentId);
+        await scenario.Appointments.ApplyAllocationAsync(followUp.AppointmentId, ToApply(followAdvice.Options[0]));
+        await scenario.Appointments.ChangeStatusAsync(
+            followUp.AppointmentId,
+            new ChangeAppointmentStatusRequest { Status = "Confirmed" });
+        scenario.Db.ChangeTracker.Clear();
+        var followLines = (await scenario.Appointments.GetAppointmentAsync(followUp.AppointmentId)).Services;
+        await deskService.ProgressOwnServiceAsync(
+            followUp.AppointmentId,
+            followLines[0].AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Start" });
+        await deskService.ProgressOwnServiceAsync(
+            followUp.AppointmentId,
+            followLines[0].AppointmentServiceId,
+            new ProgressOwnServiceRequest { Action = "Finish" });
+        scenario.Db.ChangeTracker.Clear();
+        var openFollow = await scenario.Appointments.GetAppointmentAsync(followUp.AppointmentId);
+        var cannotCancelDone = await Assert.ThrowsAsync<SchedulingException>(() =>
+            scenario.Appointments.CancelServiceAsync(
+                followUp.AppointmentId,
+                openFollow.Services[0].AppointmentServiceId,
+                openFollow.Services[0].RowVersion));
+        Assert.Contains("completed service", cannotCancelDone.Message, StringComparison.OrdinalIgnoreCase);
+        await scenario.Appointments.CancelServiceAsync(
+            followUp.AppointmentId,
+            openFollow.Services[1].AppointmentServiceId,
+            openFollow.Services[1].RowVersion);
+        await using var afterCancelDb = scenario.CreateContext(desk);
+        var blocked = await Assert.ThrowsAsync<SchedulingException>(() =>
+            new AppointmentWorkflowService(afterCancelDb, desk).ProgressOwnServiceAsync(
+                followUp.AppointmentId,
+                followLines[1].AppointmentServiceId,
+                new ProgressOwnServiceRequest { Action = "Start" }));
+        Assert.Contains("closed appointment", blocked.Message, StringComparison.OrdinalIgnoreCase);
+        var cancelled = await scenario.Appointments.CancelAppointmentAsync(
+            followUp.AppointmentId,
+            new CancelAppointmentRequest { Reason = "Customer left" });
+        Assert.Equal(nameof(AppointmentStatus.Cancelled), cancelled.Status);
+        Assert.Equal(nameof(ServiceLineStatus.Completed), cancelled.Services[0].LineStatus);
+        Assert.False(cancelled.Services[0].IsCancelled);
+        Assert.Equal(nameof(ServiceLineStatus.Cancelled), cancelled.Services[1].LineStatus);
     }
 
     [Fact]
@@ -1048,6 +1647,57 @@ public class SchedulingLogicTests
                 Schedule(line.RowVersion, start, end));
         }
 
+        public async Task<SchedulingUser> GrantUserAsync(long? employeeId, long? branchId, params string[] codes)
+        {
+            var role = new Role
+            {
+                TenantId = TenantId,
+                RoleCode = "R" + Guid.NewGuid().ToString("N")[..8],
+                RoleName = "Granted",
+                IsActive = true
+            };
+            var account = new User
+            {
+                TenantId = TenantId,
+                BranchId = branchId,
+                EmployeeId = employeeId,
+                Username = "u" + Guid.NewGuid().ToString("N")[..12],
+                PasswordHash = "hash",
+                FirstName = "Granted",
+                LastName = "User",
+                UserCategory = employeeId is > 0 ? UserCategory.Employee : UserCategory.General,
+                IsActive = true
+            };
+            _db.Roles.Add(role);
+            _db.Users.Add(account);
+            await _db.SaveChangesAsync();
+            foreach (var code in codes)
+            {
+                var permission = await _db.Permissions.SingleOrDefaultAsync(item => item.PermissionCode == code);
+                if (permission == null)
+                {
+                    permission = new Permission
+                    {
+                        PermissionCode = code,
+                        PermissionName = code,
+                        IsActive = true
+                    };
+                    _db.Permissions.Add(permission);
+                    await _db.SaveChangesAsync();
+                }
+
+                _db.RolePermissions.Add(new RolePermission
+                {
+                    RoleId = role.RoleId,
+                    PermissionId = permission.PermissionId
+                });
+            }
+
+            _db.UserRoles.Add(new UserRole { UserId = account.UserId, RoleId = role.RoleId });
+            await _db.SaveChangesAsync();
+            return new SchedulingUser(TenantId, branchId, employeeId: employeeId) { UserId = account.UserId };
+        }
+
         public SalonBookingDbContext CreateContext(long tenantId, long? branchId)
         {
             return new SalonBookingDbContext(Options(_connection), new SchedulingUser(tenantId, branchId));
@@ -1162,6 +1812,76 @@ public class SchedulingLogicTests
             EmployeeId = employee.EmployeeId;
             ServiceId = service.ServiceId;
             _user.TenantId = tenant.TenantId;
+            await GrantNotificationAccessAsync(user.UserId);
+        }
+
+        public async Task<AppointmentWorkflowService> OpenAsAsync(string permissionCode)
+        {
+            var permission = await _db.Permissions.SingleAsync(item => item.PermissionCode == permissionCode);
+            var role = new Role
+            {
+                TenantId = TenantId,
+                RoleCode = "R" + Guid.NewGuid().ToString("N")[..8],
+                RoleName = permissionCode,
+                IsActive = true
+            };
+            var account = new User
+            {
+                TenantId = TenantId,
+                BranchId = BranchId,
+                Username = "n" + Guid.NewGuid().ToString("N")[..12],
+                PasswordHash = "hash",
+                FirstName = "Notice",
+                LastName = "Reader",
+                UserCategory = UserCategory.General,
+                IsActive = true
+            };
+            _db.Roles.Add(role);
+            _db.Users.Add(account);
+            await _db.SaveChangesAsync();
+            _db.RolePermissions.Add(new RolePermission { RoleId = role.RoleId, PermissionId = permission.PermissionId });
+            _db.UserRoles.Add(new UserRole { UserId = account.UserId, RoleId = role.RoleId });
+            await _db.SaveChangesAsync();
+            return new AppointmentWorkflowService(
+                _db,
+                new SchedulingUser(TenantId, BranchId) { UserId = account.UserId });
+        }
+
+        private async Task GrantNotificationAccessAsync(long userId)
+        {
+            var role = new Role
+            {
+                TenantId = TenantId,
+                RoleCode = "RECEPTIONIST",
+                RoleName = "Receptionist",
+                IsActive = true
+            };
+            _db.Roles.Add(role);
+            foreach (var code in PermissionCatalog.NotificationReadCodes)
+            {
+                _db.Permissions.Add(new Permission
+                {
+                    PermissionCode = code,
+                    PermissionName = code,
+                    IsActive = true
+                });
+            }
+
+            await _db.SaveChangesAsync();
+            var permissions = (await _db.Permissions.ToListAsync())
+                .Where(item => PermissionCatalog.NotificationReadCodes.Contains(item.PermissionCode))
+                .ToList();
+            foreach (var permission in permissions)
+            {
+                _db.RolePermissions.Add(new RolePermission
+                {
+                    RoleId = role.RoleId,
+                    PermissionId = permission.PermissionId
+                });
+            }
+
+            _db.UserRoles.Add(new UserRole { UserId = userId, RoleId = role.RoleId });
+            await _db.SaveChangesAsync();
         }
 
         private static DbContextOptions<SalonBookingDbContext> Options(SqliteConnection connection)
@@ -1178,12 +1898,14 @@ public class SchedulingLogicTests
             long tenantId,
             long? branchId,
             UserCategory? category = null,
-            long? customerId = null)
+            long? customerId = null,
+            long? employeeId = null)
         {
             TenantId = tenantId;
             BranchId = branchId;
             UserCategory = category ?? SalonBooking.Domain.Enums.UserCategory.General;
             CustomerId = customerId;
+            EmployeeId = employeeId;
         }
 
         public bool IsAuthenticated => true;
@@ -1193,7 +1915,7 @@ public class SchedulingLogicTests
         public string? Username => "scheduler";
         public string? Role => "Admin";
         public UserCategory? UserCategory { get; }
-        public long? EmployeeId => null;
+        public long? EmployeeId { get; }
         public long? CustomerId { get; }
         public bool IsPlatformAdministrator => false;
     }

@@ -16,6 +16,12 @@ public class AppointmentServiceConfiguration : IEntityTypeConfiguration<Appointm
         builder.Property(x => x.Notes)
             .HasMaxLength(1000);
 
+        builder.Property(x => x.LineStatus)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .HasDefaultValue(SalonBooking.Domain.Enums.ServiceLineStatus.Pending)
+            .IsRequired();
+
         builder.HasIndex(x => x.PreferredEmployeeId);
 
         builder.Property(x => x.RowVersion)
@@ -35,6 +41,9 @@ public class AppointmentServiceConfiguration : IEntityTypeConfiguration<Appointm
             table.HasCheckConstraint(
                 "CK_AppointmentService_PreferredShape",
                 "([PreferredStartTime] IS NULL AND [PreferredEndTime] IS NULL) OR ([PreferredStartTime] IS NOT NULL AND [PreferredEndTime] IS NOT NULL AND [PreferredEndTime] > [PreferredStartTime])");
+            table.HasCheckConstraint(
+                "CK_AppointmentService_LineStatus",
+                "[LineStatus] IN ('Pending', 'Assigned', 'InProgress', 'Completed', 'Cancelled')");
         });
 
         builder.HasOne(x => x.Appointment)

@@ -124,6 +124,28 @@ builder.Services.AddAuthentication(
                 RequiresPermissionAttribute.Prefix + permission.Code,
                 policy => policy.Requirements.Add(new PermissionRequirement(permission.Code)));
         }
+
+        options.AddPolicy(
+            RequiresAnyPermissionAttribute.NotificationsPolicy,
+            policy => policy.Requirements.Add(
+                new AnyPermissionRequirement(PermissionCatalog.NotificationReadCodes.ToArray())));
+        options.AddPolicy(
+            RequiresAnyPermissionAttribute.LineProgressPolicy,
+            policy => policy.Requirements.Add(
+                new AnyPermissionRequirement(
+                [
+                    PermissionCatalog.AppointmentsLinesProgress
+                ])));
+        options.AddPolicy(
+            RequiresAnyPermissionAttribute.LineHistoryPolicy,
+            policy => policy.Requirements.Add(
+                new AnyPermissionRequirement(
+                [
+                    PermissionCatalog.AppointmentsOwnRead,
+                    PermissionCatalog.AppointmentsOwnProgress,
+                    PermissionCatalog.AppointmentsLinesProgress,
+                    PermissionCatalog.AppointmentsRead
+                ])));
     });
     builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
     builder.Services.AddScoped<ActiveAccountMiddleware>();

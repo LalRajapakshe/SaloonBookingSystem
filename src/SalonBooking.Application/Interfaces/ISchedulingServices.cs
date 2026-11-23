@@ -36,6 +36,21 @@ public interface IAppointmentWorkflowService
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<CancellationRequestNotificationResponse>> ListStaffNotificationsAsync(
+        CancellationToken cancellationToken = default,
+        long? branchId = null);
+
+    Task<IReadOnlyList<AppointmentResponse>> ListMyAssignedAppointmentsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<AppointmentServiceResponse> ProgressOwnServiceAsync(
+        long appointmentId,
+        long appointmentServiceId,
+        ProgressOwnServiceRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ServiceLineProgressHistoryResponse>> ListLineProgressHistoryAsync(
+        long appointmentId,
+        long appointmentServiceId,
         CancellationToken cancellationToken = default);
 
     Task<AllocationRecommendationResponse> RecommendAllocationAsync(

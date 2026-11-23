@@ -23,6 +23,12 @@ public static class PermissionCatalog
     public const string ServiceCategoriesManage = "serviceCategories.manage";
     public const string AppointmentsRead = "appointments.read";
     public const string AppointmentsManage = "appointments.manage";
+    public const string AppointmentsOwnRead = "appointments.own.read";
+    public const string AppointmentsOwnProgress = "appointments.own.progress";
+    public const string AppointmentsLinesProgress = "appointments.lines.progress";
+    public const string NotificationsBookingsRead = "notifications.bookings.read";
+    public const string NotificationsCancellationsRead = "notifications.cancellations.read";
+    public const string NotificationsConfirmationRead = "notifications.confirmation.read";
     public const string AvailabilityRead = "availability.read";
     public const string SchedulesRead = "schedules.read";
     public const string SchedulesManage = "schedules.manage";
@@ -44,6 +50,9 @@ public static class PermissionCatalog
     public const string AdminRoleCode = "ADMIN";
     public const string StaffRoleCode = "STAFF";
     public const string CustomerRoleCode = "CUSTOMER";
+    public const string StylistRoleCode = "STYLIST";
+    public const string ReceptionistRoleCode = "RECEPTIONIST";
+    public const string SupervisorRoleCode = "SUPERVISOR";
 
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
@@ -62,6 +71,12 @@ public static class PermissionCatalog
         Define(ServiceCategoriesManage, "Manage service categories", "Services", "Create and update service categories."),
         Define(AppointmentsRead, "View appointments", "Appointments", "View appointments and their services."),
         Define(AppointmentsManage, "Manage appointments", "Appointments", "Create, schedule, and update appointments."),
+        Define(AppointmentsOwnRead, "View own appointments", "Appointments", "View appointments and service lines assigned to the signed-in employee."),
+        Define(AppointmentsOwnProgress, "Progress own services", "Appointments", "Commence and complete service lines assigned to the signed-in employee."),
+        Define(AppointmentsLinesProgress, "Progress branch services", "Appointments", "Commence and complete service lines assigned to other employees in an authorized branch."),
+        Define(NotificationsBookingsRead, "View new bookings", "Notifications", "View new booking notifications."),
+        Define(NotificationsCancellationsRead, "View cancellation requests", "Notifications", "View customer cancellation requests."),
+        Define(NotificationsConfirmationRead, "View confirmations", "Notifications", "View appointments awaiting confirmation."),
         Define(AvailabilityRead, "View availability", "Appointments", "View open appointment slots."),
         Define(SchedulesRead, "View staff schedules", "Scheduling", "View staff working hours."),
         Define(SchedulesManage, "Manage staff schedules", "Scheduling", "Create and update staff working hours."),
@@ -84,14 +99,89 @@ public static class PermissionCatalog
     public static IReadOnlySet<string> StaffCodes { get; } =
         All.Where(item => item.Area is not "Customer" and not "Platform").Select(item => item.Code).ToHashSet(StringComparer.Ordinal);
 
+    /// <summary>
+    /// These codes are assigned only by an explicit role matrix.
+    /// Bootstrap must not copy them onto ADMIN or STAFF.
+    /// </summary>
+    public static IReadOnlySet<string> ExplicitAssignmentCodes { get; } =
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            AppointmentsOwnRead,
+            AppointmentsOwnProgress,
+            AppointmentsLinesProgress,
+            NotificationsBookingsRead,
+            NotificationsCancellationsRead,
+            NotificationsConfirmationRead
+        };
+
+    public static IReadOnlySet<string> NotificationReadCodes { get; } =
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            NotificationsBookingsRead,
+            NotificationsCancellationsRead,
+            NotificationsConfirmationRead
+        };
+
+    /// <summary>
+    /// Salon admin keeps management access and the notification queue.
+    /// Own-appointment and service-line progress codes stay on the stylist and supervisor roles.
+    /// </summary>
+    public static IReadOnlySet<string> AdminRoleCodes { get; } =
+        StaffCodes
+            .Where(code =>
+                !string.Equals(code, AppointmentsOwnRead, StringComparison.Ordinal) &&
+                !string.Equals(code, AppointmentsOwnProgress, StringComparison.Ordinal) &&
+                !string.Equals(code, AppointmentsLinesProgress, StringComparison.Ordinal))
+            .ToHashSet(StringComparer.Ordinal);
+
     public static IReadOnlySet<string> OperationalCodes { get; } =
         StaffCodes.Where(code =>
             !code.StartsWith("users.", StringComparison.Ordinal) &&
             !code.StartsWith("roles.", StringComparison.Ordinal) &&
             !code.StartsWith("permissions.", StringComparison.Ordinal) &&
             !code.StartsWith("qualifications.", StringComparison.Ordinal) &&
-            !string.Equals(code, TenantsManage, StringComparison.Ordinal))
+            !string.Equals(code, TenantsManage, StringComparison.Ordinal) &&
+            !ExplicitAssignmentCodes.Contains(code))
             .ToHashSet(StringComparer.Ordinal);
+
+    public static IReadOnlySet<string> StylistRoleCodes { get; } =
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            AppointmentsOwnRead
+        };
+
+    public static IReadOnlySet<string> ReceptionistRoleCodes { get; } =
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            AppointmentsRead,
+            AppointmentsManage,
+            CustomersRead,
+            CustomersManage,
+            ServicesRead,
+            BranchesRead,
+            SchedulesRead,
+            AvailabilityRead,
+            NotificationsBookingsRead,
+            NotificationsCancellationsRead,
+            NotificationsConfirmationRead,
+            AppointmentsLinesProgress
+        };
+
+    public static IReadOnlySet<string> SupervisorRoleCodes { get; } =
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            AppointmentsRead,
+            SchedulesRead,
+            AppointmentsLinesProgress
+        };
+
+    /// <summary>
+    /// A salon admin does not hold these codes, but may still assign the stylist and supervisor roles.
+    /// </summary>
+    public static bool CanDelegateWithoutHolding(string code) =>
+        string.Equals(code, AppointmentsOwnRead, StringComparison.Ordinal) ||
+        string.Equals(code, AppointmentsOwnProgress, StringComparison.Ordinal) ||
+        string.Equals(code, AppointmentsLinesProgress, StringComparison.Ordinal);
 
     public static IReadOnlySet<string> CustomerCodes { get; } =
         All.Where(item => item.Area == "Customer").Select(item => item.Code).ToHashSet(StringComparer.Ordinal);

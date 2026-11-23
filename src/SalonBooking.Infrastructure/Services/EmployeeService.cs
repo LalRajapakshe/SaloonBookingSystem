@@ -83,6 +83,10 @@ public class EmployeeService : IEmployeeService
     var query = _context.Employees.Where(e => e.IsActive &&
     e.TenantId == _currentUserService.TenantId 
         ).AsQueryable(); //&& !e.IsDeleted
+    if (_currentUserService.BranchId is long employeeBranchId and > 0)
+    {
+        query = query.Where(employee => employee.BranchId == employeeBranchId);
+    }
     if (!string.IsNullOrWhiteSpace(request.Search))
     {
     query = query.Where(c =>

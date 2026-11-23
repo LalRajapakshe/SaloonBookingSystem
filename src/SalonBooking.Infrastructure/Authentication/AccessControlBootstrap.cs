@@ -85,9 +85,14 @@ public static class AccessControlBootstrap
             .Where(permission => permission.IsActive && !permission.IsDeleted)
             .ToListAsync(cancellationToken);
 
-        await EnsureRoleAsync(context, tenantId, PermissionCatalog.AdminRoleCode, "Admin", "Tenant administrator", PermissionCatalog.StaffCodes, permissions, fillMissing: true, cancellationToken);
+        // Existing roles keep the links they already have. Filling gaps here would
+        // grant new codes, and the qualifications gap on an existing salon, at startup.
+        await EnsureRoleAsync(context, tenantId, PermissionCatalog.AdminRoleCode, "Admin", "Tenant administrator", PermissionCatalog.AdminRoleCodes, permissions, fillMissing: false, cancellationToken);
         await EnsureRoleAsync(context, tenantId, PermissionCatalog.StaffRoleCode, "Staff", "Salon staff", PermissionCatalog.OperationalCodes, permissions, fillMissing: false, cancellationToken);
-        await EnsureRoleAsync(context, tenantId, PermissionCatalog.CustomerRoleCode, "Customer", "Customer account", PermissionCatalog.CustomerCodes, permissions, fillMissing: true, cancellationToken);
+        await EnsureRoleAsync(context, tenantId, PermissionCatalog.CustomerRoleCode, "Customer", "Customer account", PermissionCatalog.CustomerCodes, permissions, fillMissing: false, cancellationToken);
+        await EnsureRoleAsync(context, tenantId, PermissionCatalog.StylistRoleCode, "Stylist", "Works on assigned service lines", PermissionCatalog.StylistRoleCodes, permissions, fillMissing: false, cancellationToken);
+        await EnsureRoleAsync(context, tenantId, PermissionCatalog.ReceptionistRoleCode, "Receptionist", "Front desk", PermissionCatalog.ReceptionistRoleCodes, permissions, fillMissing: false, cancellationToken);
+        await EnsureRoleAsync(context, tenantId, PermissionCatalog.SupervisorRoleCode, "Supervisor", "Operational oversight", PermissionCatalog.SupervisorRoleCodes, permissions, fillMissing: false, cancellationToken);
     }
 
     public static async Task AssignLegacyRoleAsync(

@@ -28,10 +28,17 @@ public class AppointmentsController : ControllerBase
 
     [HttpGet("cancellation-requests")]
     [HttpGet("notifications")]
-    [RequiresPermission(PermissionCatalog.AppointmentsRead)]
-    public async Task<IActionResult> Notifications(CancellationToken cancellationToken)
+    [RequiresAnyPermission]
+    public async Task<IActionResult> Notifications([FromQuery] long? branchId, CancellationToken cancellationToken)
     {
-        return Ok(await _appointments.ListStaffNotificationsAsync(cancellationToken));
+        return Ok(await _appointments.ListStaffNotificationsAsync(cancellationToken, branchId));
+    }
+
+    [HttpGet("mine")]
+    [RequiresPermission(PermissionCatalog.AppointmentsOwnRead)]
+    public async Task<IActionResult> Mine(CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.ListMyAssignedAppointmentsAsync(cancellationToken));
     }
 
     [HttpGet("{id:long}/allocation-recommendations")]
@@ -135,6 +142,34 @@ public class AppointmentsController : ControllerBase
     {
         return Ok(await _appointments.CancelServiceAsync(
             appointmentId, appointmentServiceId, rowVersion, cancellationToken));
+    }
+
+    [HttpGet("{appointmentId:long}/services/{appointmentServiceId:long}/progress")]
+    [RequiresAnyPermission(RequiresAnyPermissionAttribute.LineHistoryPolicy)]
+    public async Task<IActionResult> LineProgressHistory(
+        long appointmentId,
+        long appointmentServiceId,
+        CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.ListLineProgressHistoryAsync(
+            appointmentId,
+            appointmentServiceId,
+            cancellationToken));
+    }
+
+    [HttpPost("{appointmentId:long}/services/{appointmentServiceId:long}/progress")]
+    [RequiresAnyPermission(RequiresAnyPermissionAttribute.LineProgressPolicy)]
+    public async Task<IActionResult> ProgressOwn(
+        long appointmentId,
+        long appointmentServiceId,
+        ProgressOwnServiceRequest request,
+        CancellationToken cancellationToken)
+    {
+        return Ok(await _appointments.ProgressOwnServiceAsync(
+            appointmentId,
+            appointmentServiceId,
+            request,
+            cancellationToken));
     }
 
     [HttpPost("{appointmentId:long}/services/{appointmentServiceId:long}/schedule")]

@@ -78,6 +78,10 @@ public class CustomerService : ICustomerService
     var query = _context.Customers.Where(c => c.IsActive &&
     c.TenantId == _currentUserService.TenantId &&
         !c.IsDeleted).AsQueryable();
+    if (_currentUserService.BranchId is long customerBranchId and > 0)
+    {
+        query = query.Where(customer => customer.BranchId == customerBranchId);
+    }
     if (!string.IsNullOrWhiteSpace(request.Search))
     {
     query = query.Where(c =>

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SalonBooking.Application.Common;
 using SalonBooking.Application.Features.Scheduling;
 using SalonBooking.Application.Interfaces;
+using SalonBooking.Application.Security;
 using SalonBooking.Domain.Entities;
 using SalonBooking.Domain.Enums;
 using SalonBooking.Infrastructure.Scheduling;
@@ -275,10 +276,12 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
             Sequence = 1,
             PreferredEmployeeId = request.PreferredEmployeeId is > 0 ? request.PreferredEmployeeId : null,
             PreferredStartTime = preferredStart,
-            PreferredEndTime = preferredEnd
+            PreferredEndTime = preferredEnd,
+            LineStatus = ServiceLineStatus.Pending
         };
         PrepareInsertedRowVersion(line);
         _context.AppointmentServices.Add(line);
+        AddLineStatusHistory(line, null, ServiceLineStatus.Pending, "Initial", "Service added.");
         await _context.SaveChangesAsync(cancellationToken);
         return await MapLoadedAppointmentAsync(appointment, cancellationToken);
     }
@@ -342,10 +345,25 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
     }
 
     public async Task<IReadOnlyList<CancellationRequestNotificationResponse>> ListStaffNotificationsAsync(
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        long? branchId = null)
     {
         var tenantId = _currentUser.RequireTenantId();
-        long? branchId = _currentUser.BranchId is > 0 ? _currentUser.BranchId : null;
+        var requestedBranchId = branchId;
+        branchId = _currentUser.BranchId is > 0 || requestedBranchId is > 0
+            ? _currentUser.ResolveBranchId(requestedBranchId ?? 0)
+            : null;
+        if (requestedBranchId is > 0)
+        {
+            var branchBelongsToTenant = await _context.Branches.AsNoTracking().AnyAsync(
+                branch => branch.BranchId == branchId && branch.TenantId == tenantId && !branch.IsDeleted,
+                cancellationToken);
+            if (!branchBelongsToTenant)
+            {
+                throw new UnauthorizedAccessException("You cannot access another branch.");
+            }
+        }
+
         var historyRows = await (
             from history in _context.AppointmentStatusHistories.AsNoTracking()
             join appointment in _context.Appointments.AsNoTracking()
@@ -355,11 +373,26 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
                   (history.Reason == CustomerCancellationRequest.RequestedReason ||
                    history.Reason == CustomerBookingRequest.RequestedReason)
             select appointment.AppointmentId).Distinct().ToListAsync(cancellationToken);
-        if (historyRows.Count == 0) return [];
+        var today = SalonTime.Today();
+        var awaitingIds = await _context.Appointments.AsNoTracking()
+            .Where(appointment =>
+                appointment.TenantId == tenantId &&
+                appointment.Status == AppointmentStatus.Pending &&
+                appointment.AppointmentDate >= today &&
+                (branchId == null || appointment.BranchId == branchId.Value) &&
+                appointment.AppointmentServices.Any(line => !line.IsDeleted && !line.IsCancelled) &&
+                !appointment.AppointmentServices.Any(line =>
+                    !line.IsDeleted &&
+                    !line.IsCancelled &&
+                    (line.EmployeeId == null || line.StartTime == null || line.EndTime == null)))
+            .Select(appointment => appointment.AppointmentId)
+            .ToListAsync(cancellationToken);
+        var historyIds = historyRows.Concat(awaitingIds).Distinct().ToList();
+        if (historyIds.Count == 0) return [];
 
         var appointments = await _context.Appointments
             .AsNoTracking()
-            .Where(appointment => historyRows.Contains(appointment.AppointmentId))
+            .Where(appointment => historyIds.Contains(appointment.AppointmentId))
             .Include(appointment => appointment.Customer)
             .Include(appointment => appointment.Branch)
             .Include(appointment => appointment.StatusHistory)
@@ -393,6 +426,20 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
                 continue;
             }
 
+            var openLines = OpenLines(appointment);
+            var fullyAllocated = openLines.Count > 0 && openLines.All(line =>
+                SchedulingStateCalculator.IsFullyScheduled(line.EmployeeId, line.StartTime, line.EndTime, false));
+            if (appointment.Status == AppointmentStatus.Pending && fullyAllocated)
+            {
+                if (appointment.AppointmentDate < today) continue;
+                notices.Add(DescribeNotice(
+                    appointment,
+                    CustomerBookingRequest.AwaitingConfirmation,
+                    stylistNames,
+                    cancellationRequestedAt: false));
+                continue;
+            }
+
             if (!IsOpenBooking(appointment.Status)) continue;
             if (!appointment.StatusHistory.Any(item =>
                     !item.IsDeleted && item.Reason == CustomerBookingRequest.RequestedReason))
@@ -400,19 +447,325 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
                 continue;
             }
 
-            var openLines = OpenLines(appointment);
-            if (openLines.Count == 0 || openLines.All(line =>
-                    SchedulingStateCalculator.IsFullyScheduled(line.EmployeeId, line.StartTime, line.EndTime, false)))
-            {
-                continue;
-            }
+            if (openLines.Count == 0 || fullyAllocated) continue;
+            if (appointment.AppointmentDate < today) continue;
             notices.Add(DescribeNotice(appointment, CustomerBookingRequest.NotificationType, stylistNames, cancellationRequestedAt: false));
         }
 
+        var allowed = await AllowedNotificationTypesAsync(cancellationToken);
         return notices
+            .Where(item => allowed.Contains(item.NotificationType))
             .OrderByDescending(item => item.NotificationType == CustomerBookingRequest.NotificationType)
+            .ThenByDescending(item => item.NotificationType == CustomerBookingRequest.AwaitingConfirmation)
             .ThenByDescending(item => item.RequestedAt)
             .ToList();
+    }
+
+    private async Task<HashSet<string>> AllowedNotificationTypesAsync(CancellationToken cancellationToken)
+    {
+        var allowed = new HashSet<string>(StringComparer.Ordinal);
+        if (_currentUser.IsPlatformAdministrator)
+        {
+            allowed.Add(CustomerBookingRequest.NotificationType);
+            allowed.Add("CancellationRequest");
+            allowed.Add(CustomerBookingRequest.AwaitingConfirmation);
+            return allowed;
+        }
+
+        if (_currentUser.UserId is not > 0)
+        {
+            return allowed;
+        }
+
+        var tenantId = _currentUser.RequireTenantId();
+        var codes = await (
+            from userRole in _context.UserRoles.AsNoTracking()
+            join role in _context.Roles.IgnoreQueryFilters().AsNoTracking()
+                on userRole.RoleId equals role.RoleId
+            join rolePermission in _context.RolePermissions.AsNoTracking()
+                on role.RoleId equals rolePermission.RoleId
+            join permission in _context.Permissions.AsNoTracking()
+                on rolePermission.PermissionId equals permission.PermissionId
+            where userRole.UserId == _currentUser.UserId &&
+                  role.TenantId == tenantId &&
+                  role.IsActive &&
+                  !role.IsDeleted &&
+                  permission.IsActive &&
+                  !permission.IsDeleted &&
+                  (permission.PermissionCode == PermissionCatalog.NotificationsBookingsRead ||
+                   permission.PermissionCode == PermissionCatalog.NotificationsCancellationsRead ||
+                   permission.PermissionCode == PermissionCatalog.NotificationsConfirmationRead)
+            select permission.PermissionCode
+        ).ToListAsync(cancellationToken);
+
+        if (codes.Contains(PermissionCatalog.NotificationsBookingsRead))
+        {
+            allowed.Add(CustomerBookingRequest.NotificationType);
+        }
+
+        if (codes.Contains(PermissionCatalog.NotificationsCancellationsRead))
+        {
+            allowed.Add("CancellationRequest");
+        }
+
+        if (codes.Contains(PermissionCatalog.NotificationsConfirmationRead))
+        {
+            allowed.Add(CustomerBookingRequest.AwaitingConfirmation);
+        }
+
+        return allowed;
+    }
+
+    public async Task<IReadOnlyList<AppointmentResponse>> ListMyAssignedAppointmentsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUser.EmployeeId is not > 0)
+        {
+            throw new SchedulingException("This account is not linked to an employee.");
+        }
+
+        var employeeId = _currentUser.EmployeeId.Value;
+        var tenantId = _currentUser.RequireTenantId();
+        long? branchId = _currentUser.BranchId is > 0 ? _currentUser.BranchId : null;
+        var appointments = await _context.Appointments
+            .AsNoTracking()
+            .Where(appointment =>
+                appointment.TenantId == tenantId &&
+                (branchId == null || appointment.BranchId == branchId.Value) &&
+                appointment.AppointmentServices.Any(line =>
+                    !line.IsDeleted && !line.IsCancelled && line.EmployeeId == employeeId))
+            .Include(appointment => appointment.Customer)
+            .Include(appointment => appointment.AppointmentServices)
+                .ThenInclude(line => line.Service)
+            .OrderBy(appointment => appointment.AppointmentDate)
+            .ThenBy(appointment => appointment.AppointmentId)
+            .ToListAsync(cancellationToken);
+
+        return appointments
+            .Select(appointment => MapOwnAppointment(
+                appointment,
+                appointment.AppointmentServices
+                    .Where(line => !line.IsDeleted && line.EmployeeId == employeeId)
+                    .ToList()))
+            .ToList();
+    }
+
+    public async Task<AppointmentServiceResponse> ProgressOwnServiceAsync(
+        long appointmentId,
+        long appointmentServiceId,
+        ProgressOwnServiceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var action = NormalizeProgressAction(request.Action);
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+        var appointment = await RequireAppointmentAsync(appointmentId, cancellationToken);
+        if (appointment.Status is AppointmentStatus.Cancelled
+            or AppointmentStatus.Completed
+            or AppointmentStatus.NoShow)
+        {
+            throw new SchedulingException("Services cannot be progressed on a closed appointment.");
+        }
+
+        var line = await RequireLineAsync(appointmentId, appointmentServiceId, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(request.RowVersion))
+        {
+            ApplyRowVersion(line, request.RowVersion);
+        }
+
+        await AuthorizeLineProgressAsync(line, cancellationToken);
+        if (line.LineStatus == ServiceLineStatus.Completed)
+        {
+            throw new SchedulingException("A completed service cannot be progressed.");
+        }
+
+        if (line.LineStatus == ServiceLineStatus.Cancelled || line.IsCancelled)
+        {
+            throw new SchedulingException("A cancelled service cannot be progressed.");
+        }
+
+        var previous = line.LineStatus;
+        if (action == "Start")
+        {
+            if (appointment.Status == AppointmentStatus.Pending)
+            {
+                throw new SchedulingException("Confirm the appointment before starting a service.");
+            }
+
+            if (line.EmployeeId is not > 0 || line.LineStatus == ServiceLineStatus.Pending)
+            {
+                throw new SchedulingException("Assign the service before starting it.");
+            }
+
+            if (line.LineStatus != ServiceLineStatus.Assigned)
+            {
+                throw new SchedulingException("The service is already in progress.");
+            }
+
+            line.LineStatus = ServiceLineStatus.InProgress;
+            AddLineStatusHistory(line, previous, ServiceLineStatus.InProgress, "Start", request.Reason);
+        }
+        else
+        {
+            if (line.LineStatus != ServiceLineStatus.InProgress)
+            {
+                throw new SchedulingException("Start the service before finishing it.");
+            }
+
+            line.LineStatus = ServiceLineStatus.Completed;
+            line.IsCancelled = false;
+            AddLineStatusHistory(line, previous, ServiceLineStatus.Completed, "Finish", request.Reason);
+        }
+
+        TouchRowVersion(line);
+        var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
+        SyncAppointmentFromLines(appointment, lines);
+        await SaveProtectingConcurrencyAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return MapLine(line, await LoadScheduleHistoryAsync(line.AppointmentServiceId, cancellationToken));
+    }
+
+    public async Task<IReadOnlyList<ServiceLineProgressHistoryResponse>> ListLineProgressHistoryAsync(
+        long appointmentId,
+        long appointmentServiceId,
+        CancellationToken cancellationToken = default)
+    {
+        var line = await RequireLineAsync(appointmentId, appointmentServiceId, cancellationToken);
+        if (!await CanReadLineHistoryAsync(line, cancellationToken))
+        {
+            throw new UnauthorizedAccessException("You cannot view this service history.");
+        }
+
+        var rows = await _context.AppointmentServiceStatusHistories
+            .AsNoTracking()
+            .Where(item => item.AppointmentServiceId == line.AppointmentServiceId)
+            .OrderBy(item => item.ChangedAt)
+            .ThenBy(item => item.AppointmentServiceStatusHistoryId)
+            .ToListAsync(cancellationToken);
+        return rows.Select(item => new ServiceLineProgressHistoryResponse
+        {
+            AppointmentServiceStatusHistoryId = item.AppointmentServiceStatusHistoryId,
+            AppointmentServiceId = item.AppointmentServiceId,
+            AppointmentId = item.AppointmentId,
+            OldStatus = item.OldStatus?.ToString(),
+            NewStatus = item.NewStatus.ToString(),
+            EmployeeId = item.EmployeeId,
+            ChangedByUserId = item.ChangedByUserId,
+            ChangedAt = item.ChangedAt,
+            Reason = item.Reason,
+            Action = item.Action
+        }).ToList();
+    }
+
+    private static string NormalizeProgressAction(string? action)
+    {
+        var value = action?.Trim() ?? string.Empty;
+        if (string.Equals(value, "Commence", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "Start", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Start";
+        }
+
+        if (string.Equals(value, "Complete", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "Finish", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Finish";
+        }
+
+        throw new SchedulingException("Say whether to commence or complete the service.");
+    }
+
+    private async Task AuthorizeLineProgressAsync(
+        AppointmentService line,
+        CancellationToken cancellationToken)
+    {
+        if (_currentUser.IsPlatformAdministrator)
+        {
+            return;
+        }
+
+        if (await HasPermissionAsync(PermissionCatalog.AppointmentsLinesProgress, cancellationToken))
+        {
+            return;
+        }
+
+        throw new UnauthorizedAccessException("You cannot progress this service line.");
+    }
+
+    private async Task<bool> CanReadLineHistoryAsync(
+        AppointmentService line,
+        CancellationToken cancellationToken)
+    {
+        if (_currentUser.IsPlatformAdministrator)
+        {
+            return true;
+        }
+
+        if (await HasPermissionAsync(PermissionCatalog.AppointmentsRead, cancellationToken) ||
+            await HasPermissionAsync(PermissionCatalog.AppointmentsLinesProgress, cancellationToken))
+        {
+            return true;
+        }
+
+        var ownsLine = _currentUser.EmployeeId is > 0 && line.EmployeeId == _currentUser.EmployeeId;
+        return ownsLine &&
+            (await HasPermissionAsync(PermissionCatalog.AppointmentsOwnRead, cancellationToken) ||
+             await HasPermissionAsync(PermissionCatalog.AppointmentsOwnProgress, cancellationToken));
+    }
+
+    private async Task<bool> HasPermissionAsync(string code, CancellationToken cancellationToken)
+    {
+        if (_currentUser.IsPlatformAdministrator && PermissionCatalog.IsStaffCode(code))
+        {
+            return true;
+        }
+
+        if (_currentUser.UserId is not > 0)
+        {
+            return false;
+        }
+
+        var tenantId = _currentUser.RequireTenantId();
+        return await (
+            from userRole in _context.UserRoles.AsNoTracking()
+            join role in _context.Roles.IgnoreQueryFilters().AsNoTracking()
+                on userRole.RoleId equals role.RoleId
+            join rolePermission in _context.RolePermissions.AsNoTracking()
+                on role.RoleId equals rolePermission.RoleId
+            join permission in _context.Permissions.AsNoTracking()
+                on rolePermission.PermissionId equals permission.PermissionId
+            where userRole.UserId == _currentUser.UserId &&
+                  role.TenantId == tenantId &&
+                  role.IsActive &&
+                  !role.IsDeleted &&
+                  permission.IsActive &&
+                  !permission.IsDeleted &&
+                  permission.PermissionCode == code
+            select permission.PermissionId
+        ).AnyAsync(cancellationToken);
+    }
+
+    private static AppointmentResponse MapOwnAppointment(
+        Appointment appointment,
+        IReadOnlyList<AppointmentService> lines)
+    {
+        var mapped = MapAppointment(appointment, lines, []);
+        var customerName = $"{appointment.Customer?.FirstName} {appointment.Customer?.LastName}".Trim();
+        mapped.CustomerName = string.IsNullOrWhiteSpace(customerName) ? null : customerName;
+        mapped.Notes = null;
+        mapped.CancelledAt = null;
+        mapped.CancelledByUserId = null;
+        mapped.CancellationReason = null;
+        mapped.CancellationRequest = CustomerCancellationRequest.None;
+        mapped.StatusHistory = [];
+        foreach (var line in mapped.Services)
+        {
+            line.ScheduleHistory = [];
+            line.UnitPrice = 0;
+        }
+
+        return mapped;
     }
 
     private static bool IsOpenBooking(AppointmentStatus status) =>
@@ -476,9 +829,12 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
             BranchId = appointment.BranchId,
             BranchName = appointment.Branch?.BranchName ?? string.Empty,
             RequestedAt = requestedAt,
-            RequestState = notificationType == CustomerBookingRequest.NotificationType
-                ? allocation
-                : CustomerCancellationRequest.Requested,
+            RequestState = notificationType switch
+            {
+                CustomerBookingRequest.NotificationType => allocation,
+                CustomerBookingRequest.AwaitingConfirmation => CustomerBookingRequest.AwaitingConfirmation,
+                _ => CustomerCancellationRequest.Requested
+            },
             PreferredStylistName = preferredId is > 0 && stylistNames.TryGetValue(preferredId.Value, out var stylist)
                 ? stylist
                 : null,
@@ -535,10 +891,9 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
         AddStatusHistory(appointment, previous, AppointmentStatus.Cancelled, CustomerCancellationRequest.ApprovedReason);
 
         var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
-        foreach (var line in lines.Where(line => !line.IsCancelled))
+        foreach (var line in lines)
         {
-            line.IsCancelled = true;
-            TouchRowVersion(line);
+            CloseOpenLine(line, CustomerCancellationRequest.ApprovedReason);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -798,12 +1153,51 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
             throw new SchedulingException("The appointment already has that status.");
         }
 
+        if (status == AppointmentStatus.Confirmed)
+        {
+            if (appointment.Status != AppointmentStatus.Pending)
+            {
+                throw new SchedulingException("Only a pending appointment can be confirmed.");
+            }
+
+            var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
+            var open = lines.Where(line => !line.IsCancelled).ToList();
+            if (open.Count == 0 || open.Any(line => !SchedulingStateCalculator.IsFullyScheduled(
+                    line.EmployeeId, line.StartTime, line.EndTime, line.IsCancelled)))
+            {
+                throw new SchedulingException("Allocate every service before confirming the appointment.");
+            }
+        }
+
+        if (status == AppointmentStatus.Completed)
+        {
+            var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
+            var unfinished = lines.Any(line =>
+                !line.IsDeleted &&
+                line.LineStatus != ServiceLineStatus.Cancelled &&
+                !line.IsCancelled &&
+                line.LineStatus != ServiceLineStatus.Completed);
+            if (unfinished)
+            {
+                throw new SchedulingException("Finish every service before completing the appointment.");
+            }
+        }
+
         var previous = appointment.Status;
         appointment.Status = status;
         appointment.CancelledAt = null;
         appointment.CancelledByUserId = null;
         appointment.CancellationReason = null;
         AddStatusHistory(appointment, previous, status, request.Reason);
+        if (status == AppointmentStatus.NoShow)
+        {
+            var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
+            foreach (var line in lines)
+            {
+                CloseOpenLine(line, "The appointment was marked as a no-show.");
+            }
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
         return await MapLoadedAppointmentAsync(appointment, cancellationToken);
     }
@@ -827,10 +1221,9 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
         AddStatusHistory(appointment, previous, AppointmentStatus.Cancelled, request.Reason);
 
         var lines = await LoadLinesAsync(appointment.AppointmentId, cancellationToken);
-        foreach (var line in lines.Where(line => !line.IsCancelled))
+        foreach (var line in lines)
         {
-            line.IsCancelled = true;
-            TouchRowVersion(line);
+            CloseOpenLine(line, request.Reason);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -863,11 +1256,13 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
             Sequence = lines.Count == 0 ? 1 : lines.Max(item => item.Sequence) + 1,
             Notes = request.Notes,
             PreferredStartTime = request.PreferredStartTime,
-            PreferredEndTime = request.PreferredEndTime
+            PreferredEndTime = request.PreferredEndTime,
+            LineStatus = ServiceLineStatus.Pending
         };
         ValidatePreferredTimes(appointment.AppointmentDate, line.PreferredStartTime, line.PreferredEndTime);
         PrepareInsertedRowVersion(line);
         _context.AppointmentServices.Add(line);
+        AddLineStatusHistory(line, null, ServiceLineStatus.Pending, "Initial", "Service added.");
         await _context.SaveChangesAsync(cancellationToken);
         return MapLine(line, []);
     }
@@ -899,13 +1294,19 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
     {
         var line = await RequireLineAsync(appointmentId, appointmentServiceId, cancellationToken);
         ApplyRowVersion(line, rowVersion);
-        if (line.IsCancelled)
+        if (line.IsCancelled || line.LineStatus == ServiceLineStatus.Cancelled)
         {
             throw new SchedulingException("The service line is already cancelled.");
         }
 
-        line.IsCancelled = true;
-        TouchRowVersion(line);
+        if (line.LineStatus == ServiceLineStatus.Completed)
+        {
+            throw new SchedulingException("A completed service cannot be cancelled.");
+        }
+
+        CloseOpenLine(line, "Service cancelled.");
+        var appointment = await RequireAppointmentAsync(appointmentId, cancellationToken);
+        SyncAppointmentFromLines(appointment, await LoadLinesAsync(appointment.AppointmentId, cancellationToken));
         await SaveProtectingConcurrencyAsync(cancellationToken);
         return MapLine(line, await LoadScheduleHistoryAsync(line.AppointmentServiceId, cancellationToken));
     }
@@ -920,9 +1321,14 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
         var line = await RequireLineAsync(appointmentId, appointmentServiceId, cancellationToken);
         ApplyRowVersion(line, request.RowVersion);
 
-        if (line.IsCancelled)
+        if (line.IsCancelled || line.LineStatus == ServiceLineStatus.Cancelled)
         {
             throw new SchedulingException("A cancelled service line cannot be scheduled.");
+        }
+
+        if (line.LineStatus == ServiceLineStatus.Completed)
+        {
+            throw new SchedulingException("A completed service cannot be reassigned.");
         }
 
         if (request.EndTime <= request.StartTime)
@@ -1004,9 +1410,12 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
             });
         }
 
+        var previousEmployeeId = line.EmployeeId;
+        var previousStatus = line.LineStatus;
         line.EmployeeId = request.EmployeeId;
         line.StartTime = request.StartTime;
         line.EndTime = request.EndTime;
+        RecordAssignment(line, previousEmployeeId, previousStatus, request.Reason);
         TouchRowVersion(line);
         await SaveProtectingConcurrencyAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -1104,6 +1513,107 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
             .ToListAsync(cancellationToken);
 
         return MapAppointment(appointment, lines, history, scheduleHistory);
+    }
+
+    private void CloseOpenLine(AppointmentService line, string? reason)
+    {
+        if (line.IsDeleted || line.LineStatus == ServiceLineStatus.Completed)
+        {
+            return;
+        }
+
+        if (line.LineStatus == ServiceLineStatus.Cancelled || line.IsCancelled)
+        {
+            line.IsCancelled = true;
+            line.LineStatus = ServiceLineStatus.Cancelled;
+            return;
+        }
+
+        var previous = line.LineStatus;
+        line.LineStatus = ServiceLineStatus.Cancelled;
+        line.IsCancelled = true;
+        TouchRowVersion(line);
+        AddLineStatusHistory(line, previous, ServiceLineStatus.Cancelled, "Cancel", reason);
+    }
+
+    private void RecordAssignment(
+        AppointmentService line,
+        long? previousEmployeeId,
+        ServiceLineStatus previousStatus,
+        string? reason)
+    {
+        if (previousStatus == ServiceLineStatus.Pending)
+        {
+            line.LineStatus = ServiceLineStatus.Assigned;
+            line.IsCancelled = false;
+            AddLineStatusHistory(line, previousStatus, ServiceLineStatus.Assigned, "Assign", reason);
+            return;
+        }
+
+        if (previousEmployeeId != line.EmployeeId &&
+            previousStatus is ServiceLineStatus.Assigned or ServiceLineStatus.InProgress)
+        {
+            AddLineStatusHistory(line, previousStatus, previousStatus, "Reassign", reason);
+        }
+    }
+
+    private void SyncAppointmentFromLines(Appointment appointment, IReadOnlyList<AppointmentService> lines)
+    {
+        if (appointment.Status is AppointmentStatus.Cancelled
+            or AppointmentStatus.NoShow
+            or AppointmentStatus.Completed)
+        {
+            return;
+        }
+
+        var applicable = lines
+            .Where(line => !line.IsDeleted && line.LineStatus != ServiceLineStatus.Cancelled && !line.IsCancelled)
+            .ToList();
+        if (applicable.Count == 0)
+        {
+            return;
+        }
+
+        if (applicable.All(line => line.LineStatus == ServiceLineStatus.Completed))
+        {
+            var previous = appointment.Status;
+            appointment.Status = AppointmentStatus.Completed;
+            AddStatusHistory(appointment, previous, AppointmentStatus.Completed, "All services are complete.");
+            return;
+        }
+
+        if (applicable.Any(line => line.LineStatus == ServiceLineStatus.InProgress) &&
+            appointment.Status is AppointmentStatus.Confirmed or AppointmentStatus.CheckedIn)
+        {
+            var previous = appointment.Status;
+            appointment.Status = AppointmentStatus.InProgress;
+            AddStatusHistory(appointment, previous, AppointmentStatus.InProgress, "A service has started.");
+        }
+    }
+
+    /// The transition time is the server clock. The request cannot supply it.
+    private void AddLineStatusHistory(
+        AppointmentService line,
+        ServiceLineStatus? oldStatus,
+        ServiceLineStatus newStatus,
+        string action,
+        string? reason)
+    {
+        _context.AppointmentServiceStatusHistories.Add(new AppointmentServiceStatusHistory
+        {
+            TenantId = line.TenantId,
+            BranchId = line.BranchId,
+            AppointmentId = line.AppointmentId,
+            Appointment = line.AppointmentId == 0 ? line.Appointment : null,
+            AppointmentService = line,
+            OldStatus = oldStatus,
+            NewStatus = newStatus,
+            EmployeeId = line.EmployeeId,
+            ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = _currentUser.UserId,
+            Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
+            Action = action
+        });
     }
 
     private void AddStatusHistory(
@@ -1253,9 +1763,11 @@ public sealed partial class AppointmentWorkflowService : IAppointmentWorkflowSer
             PreferredEndTime = line.PreferredEndTime,
             DurationMinutes = line.DurationMinutes,
             UnitPrice = line.UnitPrice,
+            ServiceName = line.Service?.ServiceName,
             Sequence = line.Sequence,
             Notes = line.Notes,
             IsCancelled = line.IsCancelled,
+            LineStatus = line.LineStatus.ToString(),
             IsFullyScheduled = SchedulingStateCalculator.IsFullyScheduled(
                 line.EmployeeId,
                 line.StartTime,

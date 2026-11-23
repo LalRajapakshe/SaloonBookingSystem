@@ -208,6 +208,11 @@ public sealed class UserAccountService : IUserAccountService
             query = query.Where(user => user.BranchId == branchId);
         }
 
+        if (!_currentUser.IsPlatformAdministrator)
+        {
+            query = query.Where(user => !user.IsPlatformAdministrator);
+        }
+
         return query;
     }
 
@@ -223,6 +228,11 @@ public sealed class UserAccountService : IUserAccountService
             .FirstOrDefaultAsync(item => item.UserId == userId && !item.IsDeleted, cancellationToken);
 
         if (user == null || user.TenantId != tenantId)
+        {
+            throw new KeyNotFoundException();
+        }
+
+        if (user.IsPlatformAdministrator && !_currentUser.IsPlatformAdministrator)
         {
             throw new KeyNotFoundException();
         }

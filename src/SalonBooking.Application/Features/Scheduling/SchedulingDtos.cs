@@ -95,6 +95,38 @@ public sealed class UpdateAppointmentServiceRequest
     public string RowVersion { get; set; } = string.Empty;
 }
 
+public sealed class ProgressOwnServiceRequest
+{
+    public string Action { get; set; } = string.Empty;
+
+    public string? Reason { get; set; }
+
+    public string? RowVersion { get; set; }
+}
+
+public sealed class ServiceLineProgressHistoryResponse
+{
+    public long AppointmentServiceStatusHistoryId { get; set; }
+
+    public long AppointmentServiceId { get; set; }
+
+    public long AppointmentId { get; set; }
+
+    public string? OldStatus { get; set; }
+
+    public string NewStatus { get; set; } = string.Empty;
+
+    public long? EmployeeId { get; set; }
+
+    public long? ChangedByUserId { get; set; }
+
+    public DateTime ChangedAt { get; set; }
+
+    public string? Reason { get; set; }
+
+    public string Action { get; set; } = string.Empty;
+}
+
 public sealed class ScheduleAppointmentServiceRequest
 {
     public long EmployeeId { get; set; }
@@ -121,6 +153,7 @@ public static class CustomerBookingRequest
     public const string RequestedReason = "Requested from the customer app. The time is not reserved.";
     public const string Unallocated = "Unallocated";
     public const string PartiallyScheduled = "PartiallyScheduled";
+    public const string AwaitingConfirmation = "AwaitingConfirmation";
 }
 
 public static class CustomerCancellationRequest
@@ -366,6 +399,8 @@ public sealed class AppointmentResponse
 
     public string Status { get; set; } = string.Empty;
 
+    public string? CustomerName { get; set; }
+
     public string SchedulingState { get; set; } = string.Empty;
 
     public bool NeedsScheduling { get; set; }
@@ -396,6 +431,8 @@ public sealed class AppointmentServiceResponse
 
     public long ServiceId { get; set; }
 
+    public string? ServiceName { get; set; }
+
     public long? EmployeeId { get; set; }
 
     public DateTime? StartTime { get; set; }
@@ -415,6 +452,8 @@ public sealed class AppointmentServiceResponse
     public string? Notes { get; set; }
 
     public bool IsCancelled { get; set; }
+
+    public string LineStatus { get; set; } = "Pending";
 
     public bool IsFullyScheduled { get; set; }
 

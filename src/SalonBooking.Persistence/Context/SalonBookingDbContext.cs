@@ -60,6 +60,16 @@ public DbSet<StaffSchedule> StaffSchedules => Set<StaffSchedule>();
 public DbSet<StaffLeave> StaffLeaves => Set<StaffLeave>();
 public DbSet<Qualification> Qualifications => Set<Qualification>();
 public DbSet<EmployeeQualification> EmployeeQualifications => Set<EmployeeQualification>();
+public DbSet<RetailProduct> RetailProducts => Set<RetailProduct>();
+public DbSet<TaxSetting> TaxSettings => Set<TaxSetting>();
+public DbSet<Bill> Bills => Set<Bill>();
+public DbSet<BillLine> BillLines => Set<BillLine>();
+public DbSet<ActiveServiceCharge> ActiveServiceCharges => Set<ActiveServiceCharge>();
+public DbSet<BillPayment> BillPayments => Set<BillPayment>();
+public DbSet<RentalAsset> RentalAssets => Set<RentalAsset>();
+public DbSet<RentalReservation> RentalReservations => Set<RentalReservation>();
+public DbSet<ActiveRentalCharge> ActiveRentalCharges => Set<ActiveRentalCharge>();
+public DbSet<ServiceFeedback> ServiceFeedback => Set<ServiceFeedback>();
 
     //public DbSet<Branch> Branches { get; set; }
 protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -89,11 +99,23 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
         modelBuilder.ApplyConfiguration(new StaffLeaveConfiguration());
         modelBuilder.ApplyConfiguration(new QualificationConfiguration());
         modelBuilder.ApplyConfiguration(new EmployeeQualificationConfiguration());
+        modelBuilder.ApplyConfiguration(new RetailProductConfiguration());
+        modelBuilder.ApplyConfiguration(new TaxSettingConfiguration());
+        modelBuilder.ApplyConfiguration(new BillConfiguration());
+        modelBuilder.ApplyConfiguration(new BillLineConfiguration());
+        modelBuilder.ApplyConfiguration(new ActiveServiceChargeConfiguration());
+        modelBuilder.ApplyConfiguration(new BillPaymentConfiguration());
+        modelBuilder.ApplyConfiguration(new RentalAssetConfiguration());
+        modelBuilder.ApplyConfiguration(new RentalReservationConfiguration());
+        modelBuilder.ApplyConfiguration(new ActiveRentalChargeConfiguration());
+        modelBuilder.ApplyConfiguration(new ServiceFeedbackConfiguration());
 
         var rowVersion = modelBuilder.Entity<AppointmentService>().Property(x => x.RowVersion);
+        var billVersion = modelBuilder.Entity<Bill>().Property(x => x.RowVersion);
         if (Database.IsSqlServer())
         {
             rowVersion.IsRowVersion();
+            billVersion.IsRowVersion();
         }
 
     modelBuilder.Entity<Customer>()
@@ -203,6 +225,64 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
         .HasQueryFilter(x =>
             !x.IsDeleted &&
             x.TenantId == _tenantId);
+
+    modelBuilder.Entity<RetailProduct>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<TaxSetting>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<Bill>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<BillLine>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<BillPayment>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<ActiveServiceCharge>()
+        .HasQueryFilter(x =>
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<RentalAsset>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<RentalReservation>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<ActiveRentalCharge>()
+        .HasQueryFilter(x =>
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
+
+    modelBuilder.Entity<ServiceFeedback>()
+        .HasQueryFilter(x =>
+            !x.IsDeleted &&
+            x.TenantId == _tenantId &&
+            (!_filterByBranch || x.BranchId == _branchId));
 }
 
 public override async Task<int> SaveChangesAsync(

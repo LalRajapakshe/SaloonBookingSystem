@@ -37,6 +37,7 @@ public sealed class RequiresAnyPermissionAttribute : AuthorizeAttribute
     public const string NotificationsPolicy = "permission-any:notifications";
     public const string LineProgressPolicy = "permission-any:line-progress";
     public const string LineHistoryPolicy = "permission-any:line-history";
+    public const string DashboardPolicy = "permission-any:dashboard";
 
     public RequiresAnyPermissionAttribute()
     {

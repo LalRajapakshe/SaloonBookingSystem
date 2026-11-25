@@ -7,6 +7,7 @@ public static class DocSeriesKind
     public const string Service = "Service";
     public const string Employee = "Employee";
     public const string Customer = "Customer";
+    public const string Bill = "Bill";
 
     public static readonly IReadOnlyList<(string Kind, string Prefix)> All =
     [
@@ -14,6 +15,7 @@ public static class DocSeriesKind
         (Category, "CAT"),
         (Service, "SER"),
         (Employee, "EMP"),
-        (Customer, "CUS")
+        (Customer, "CUS"),
+        (Bill, "BIL")
     ];
 }

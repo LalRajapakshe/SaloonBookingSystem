@@ -1,0 +1,35 @@
+----- TABLE 0 -----
+UserId	TenantId	UserCategory	IsPlatformAdministrator	IsActive	IsDeleted	HasBranch	HasEmployee	HasCustomer	RoleCode
+1	1	1	True	True	False	1	0	0	ADMIN
+2	1	3	False	True	False	1	0	1	CUSTOMER
+3	1	1	False	True	False	0	0	0	ADMIN
+----- TABLE 1 -----
+ColumnName
+PermissionId
+PermissionCode
+PermissionName
+Description
+IsActive
+CreatedDate
+CreatedBy
+ModifiedDate
+ModifiedBy
+IsDeleted
+----- TABLE 2 -----
+ColumnName
+RoleId
+RoleCode
+RoleName
+Description
+CreatedDate
+CreatedBy
+ModifiedDate
+ModifiedBy
+TenantId
+IsActive
+IsDeleted
+----- TABLE 3 -----
+ColumnName
+RolePermissionId
+RoleId
+PermissionId

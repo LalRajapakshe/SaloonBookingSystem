@@ -22,6 +22,60 @@ namespace SalonBooking.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.ActiveRentalCharge", b =>
+                {
+                    b.Property<long>("RentalReservationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BillId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BillLineId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RentalReservationId");
+
+                    b.HasIndex("BillId");
+
+                    b.HasIndex("BillLineId")
+                        .IsUnique();
+
+                    b.ToTable("ActiveRentalCharges");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.ActiveServiceCharge", b =>
+                {
+                    b.Property<long>("AppointmentServiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BillId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BillLineId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("AppointmentServiceId");
+
+                    b.HasIndex("BillId");
+
+                    b.HasIndex("BillLineId")
+                        .IsUnique();
+
+                    b.ToTable("ActiveServiceCharges", (string)null);
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.Appointment", b =>
                 {
                     b.Property<long>("AppointmentId")
@@ -419,6 +473,288 @@ namespace SalonBooking.Persistence.Migrations
                     b.HasIndex("AppointmentId", "ChangedAt");
 
                     b.ToTable("AppointmentStatusHistories");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.Bill", b =>
+                {
+                    b.Property<long>("BillId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BillId"));
+
+                    b.Property<long?>("AppointmentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("BillDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BillNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("CustomerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("FinalizedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("VoidedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("BillId");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("TenantId", "BillNumber")
+                        .IsUnique()
+                        .HasFilter("[BillNumber] IS NOT NULL AND [IsDeleted] = 0");
+
+                    b.HasIndex("TenantId", "BranchId", "BillDate");
+
+                    b.ToTable("Bills", t =>
+                        {
+                            t.HasCheckConstraint("CK_Bill_Money", "CAST(Subtotal AS REAL) >= 0 AND CAST(TaxAmount AS REAL) >= 0 AND CAST(Total AS REAL) >= 0");
+
+                            t.HasCheckConstraint("CK_Bill_PaymentStatus", "[PaymentStatus] IN ('Unpaid', 'PartiallyPaid', 'Paid')");
+
+                            t.HasCheckConstraint("CK_Bill_Status", "[Status] IN ('Draft', 'Finalized', 'Void')");
+                        });
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.BillLine", b =>
+                {
+                    b.Property<long>("BillLineId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BillLineId"));
+
+                    b.Property<long?>("AppointmentServiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BillId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("LineType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("RentalReservationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("RetailProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxRatePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("BillLineId");
+
+                    b.HasIndex("AppointmentServiceId");
+
+                    b.HasIndex("BillId");
+
+                    b.HasIndex("RentalReservationId");
+
+                    b.HasIndex("RetailProductId");
+
+                    b.ToTable("BillLines", t =>
+                        {
+                            t.HasCheckConstraint("CK_BillLine_Money", "Quantity > 0 AND CAST(UnitPrice AS REAL) >= 0 AND CAST(DiscountAmount AS REAL) = 0 AND CAST(TaxRatePercent AS REAL) >= 0 AND CAST(TaxRatePercent AS REAL) <= 100 AND CAST(TaxAmount AS REAL) >= 0 AND CAST(LineTotal AS REAL) >= 0");
+
+                            t.HasCheckConstraint("CK_BillLine_Shape", "([LineType] = 'Service' AND [AppointmentServiceId] IS NOT NULL AND [RetailProductId] IS NULL AND [RentalReservationId] IS NULL) OR ([LineType] = 'Product' AND [RetailProductId] IS NOT NULL AND [AppointmentServiceId] IS NULL AND [RentalReservationId] IS NULL) OR ([LineType] = 'Rental' AND [RentalReservationId] IS NOT NULL AND [AppointmentServiceId] IS NULL AND [RetailProductId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_BillLine_Type", "[LineType] IN ('Service', 'Product', 'Rental')");
+                        });
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.BillPayment", b =>
+                {
+                    b.Property<long>("BillPaymentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BillPaymentId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("BillId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("RecordedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("BillPaymentId");
+
+                    b.HasIndex("BillId");
+
+                    b.ToTable("BillPayments", t =>
+                        {
+                            t.HasCheckConstraint("CK_BillPayment_Method", "[Method] IN ('Cash', 'Card', 'BankTransfer', 'Other')");
+
+                            t.HasCheckConstraint("CK_BillPayment_Shape", "(Kind = 'Payment' AND CAST(Amount AS REAL) > 0) OR (Kind = 'Refund' AND CAST(Amount AS REAL) < 0)");
+                        });
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Branch", b =>
@@ -966,6 +1302,249 @@ namespace SalonBooking.Persistence.Migrations
                     b.ToTable("Qualifications");
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.RentalAsset", b =>
+                {
+                    b.Property<long>("RentalAssetId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("RentalAssetId"));
+
+                    b.Property<string>("AssetCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("AssetName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<decimal>("ChargePerUse")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CleaningBufferMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConditionNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsUnderMaintenance")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RentalAssetId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("TenantId", "BranchId", "AssetCode")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("RentalAssets", t =>
+                        {
+                            t.HasCheckConstraint("CK_RentalAsset_Money", "CAST(ChargePerUse AS REAL) >= 0 AND CleaningBufferMinutes >= 0 AND CleaningBufferMinutes <= 10080");
+                        });
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.RentalReservation", b =>
+                {
+                    b.Property<long>("RentalReservationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("RentalReservationId"));
+
+                    b.Property<DateTime?>("ActualIssuedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ActualReturnedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("AppointmentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("ChargePerUse")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("ConditionDiscrepancy")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("CustomerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("IssueCondition")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long?>("IssuedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("PlannedIssueAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PlannedReturnAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("RentalAssetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ReturnCondition")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long?>("ReturnedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RentalReservationId");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("RentalAssetId", "PlannedIssueAt");
+
+                    b.ToTable("RentalReservations", t =>
+                        {
+                            t.HasCheckConstraint("CK_RentalReservation_Status", "[Status] IN ('Reserved', 'Issued', 'Returned', 'Cancelled')");
+
+                            t.HasCheckConstraint("CK_RentalReservation_Window", "[PlannedReturnAt] > [PlannedIssueAt] AND CAST(ChargePerUse AS REAL) >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.RetailProduct", b =>
+                {
+                    b.Property<long>("RetailProductId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("RetailProductId"));
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("SellingPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RetailProductId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("TenantId", "BranchId", "ProductCode")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("RetailProducts");
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.Role", b =>
                 {
                     b.Property<long>("RoleId")
@@ -1188,6 +1767,74 @@ namespace SalonBooking.Persistence.Migrations
                     b.ToTable("ServiceCategories");
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.ServiceFeedback", b =>
+                {
+                    b.Property<long>("ServiceFeedbackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ServiceFeedbackId"));
+
+                    b.Property<long>("AppointmentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("AppointmentServiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("CustomerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("EmployeeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ServiceFeedbackId");
+
+                    b.HasIndex("AppointmentServiceId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("ServiceFeedback", t =>
+                        {
+                            t.HasCheckConstraint("CK_ServiceFeedback_Rating", "[Rating] >= 1 AND [Rating] <= 5");
+                        });
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.StaffLeave", b =>
                 {
                     b.Property<long>("StaffLeaveId")
@@ -1315,6 +1962,61 @@ namespace SalonBooking.Persistence.Migrations
                             t.HasCheckConstraint("CK_StaffSchedule_DayOfWeek", "[DayOfWeek] >= 0 AND [DayOfWeek] <= 6");
 
                             t.HasCheckConstraint("CK_StaffSchedule_EndAfterStart", "[EndTime] > [StartTime]");
+                        });
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.TaxSetting", b =>
+                {
+                    b.Property<long>("TaxSettingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("TaxSettingId"));
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ModifiedBy")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<decimal>("RatePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("TaxSettingId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("TenantId", "BranchId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("TaxSettings", t =>
+                        {
+                            t.HasCheckConstraint("CK_TaxSetting_Rate", "CAST(RatePercent AS REAL) >= 0 AND CAST(RatePercent AS REAL) <= 100");
                         });
                 });
 
@@ -1542,6 +2244,60 @@ namespace SalonBooking.Persistence.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.ActiveRentalCharge", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Bill", "Bill")
+                        .WithMany()
+                        .HasForeignKey("BillId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.BillLine", "BillLine")
+                        .WithMany()
+                        .HasForeignKey("BillLineId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.RentalReservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("RentalReservationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Bill");
+
+                    b.Navigation("BillLine");
+
+                    b.Navigation("Reservation");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.ActiveServiceCharge", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.AppointmentService", "AppointmentService")
+                        .WithMany()
+                        .HasForeignKey("AppointmentServiceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.Bill", "Bill")
+                        .WithMany()
+                        .HasForeignKey("BillId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.BillLine", "BillLine")
+                        .WithMany()
+                        .HasForeignKey("BillLineId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("AppointmentService");
+
+                    b.Navigation("Bill");
+
+                    b.Navigation("BillLine");
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.Appointment", b =>
                 {
                     b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
@@ -1702,6 +2458,75 @@ namespace SalonBooking.Persistence.Migrations
                     b.Navigation("ChangedByUser");
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.Bill", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.BillLine", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.AppointmentService", "AppointmentService")
+                        .WithMany()
+                        .HasForeignKey("AppointmentServiceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("SalonBooking.Domain.Entities.Bill", "Bill")
+                        .WithMany("Lines")
+                        .HasForeignKey("BillId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.RentalReservation", "RentalReservation")
+                        .WithMany()
+                        .HasForeignKey("RentalReservationId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("SalonBooking.Domain.Entities.RetailProduct", "RetailProduct")
+                        .WithMany()
+                        .HasForeignKey("RetailProductId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("AppointmentService");
+
+                    b.Navigation("Bill");
+
+                    b.Navigation("RentalReservation");
+
+                    b.Navigation("RetailProduct");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.BillPayment", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Bill", "Bill")
+                        .WithMany("Payments")
+                        .HasForeignKey("BillId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Bill");
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.Branch", b =>
                 {
                     b.HasOne("SalonBooking.Domain.Entities.Tenant", "Tenant")
@@ -1808,6 +2633,54 @@ namespace SalonBooking.Persistence.Migrations
                     b.Navigation("Service");
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.RentalAsset", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.RentalReservation", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("SalonBooking.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.RentalAsset", "Asset")
+                        .WithMany()
+                        .HasForeignKey("RentalAssetId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("Asset");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.RetailProduct", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.RolePermission", b =>
                 {
                     b.HasOne("SalonBooking.Domain.Entities.Permission", "Permission")
@@ -1846,6 +2719,25 @@ namespace SalonBooking.Persistence.Migrations
                     b.Navigation("ServiceCategory");
                 });
 
+            modelBuilder.Entity("SalonBooking.Domain.Entities.ServiceFeedback", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.AppointmentService", "AppointmentService")
+                        .WithMany()
+                        .HasForeignKey("AppointmentServiceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SalonBooking.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("AppointmentService");
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("SalonBooking.Domain.Entities.StaffLeave", b =>
                 {
                     b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
@@ -1882,6 +2774,17 @@ namespace SalonBooking.Persistence.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.TaxSetting", b =>
+                {
+                    b.HasOne("SalonBooking.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.User", b =>
@@ -1939,6 +2842,13 @@ namespace SalonBooking.Persistence.Migrations
                     b.Navigation("ScheduleHistory");
 
                     b.Navigation("StatusHistory");
+                });
+
+            modelBuilder.Entity("SalonBooking.Domain.Entities.Bill", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("SalonBooking.Domain.Entities.Employee", b =>

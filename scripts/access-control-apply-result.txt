@@ -1,0 +1,17 @@
+committed
+permissionCount=37
+userRoleCount=3
+platformAdmins=1
+1 ADMIN active=True links=58 users=2
+1 CUSTOMER active=True links=5 users=1
+1 RECEPTIONIST active=True links=11 users=0
+1 STAFF active=False links=18 users=0
+1 STYLIST active=True links=2 users=0
+1 SUPERVISOR active=True links=2 users=0
+2 ADMIN active=True links=29 users=0
+2 CUSTOMER active=True links=5 users=0
+2 RECEPTIONIST active=True links=11 users=0
+2 STAFF active=False links=18 users=0
+2 STYLIST active=True links=2 users=0
+2 SUPERVISOR active=True links=2 users=0
+tadminRoles=ADMIN

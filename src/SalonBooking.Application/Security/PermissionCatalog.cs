@@ -45,6 +45,16 @@ public static class PermissionCatalog
     public const string CustomerAvailabilityRead = "customer.availability.read";
     public const string QualificationsRead = "qualifications.read";
     public const string QualificationsManage = "qualifications.manage";
+    public const string ProductsRead = "products.read";
+    public const string ProductsManage = "products.manage";
+    public const string BillsRead = "bills.read";
+    public const string BillsManage = "bills.manage";
+    public const string PaymentsCollect = "payments.collect";
+    public const string TaxRead = "tax.read";
+    public const string TaxManage = "tax.manage";
+    public const string RentalsRead = "rentals.read";
+    public const string RentalsManage = "rentals.manage";
+    public const string RentalsIssue = "rentals.issue";
     public const string PlatformManage = "platform.manage";
 
     public const string AdminRoleCode = "ADMIN";
@@ -93,6 +103,16 @@ public static class PermissionCatalog
         Define(CustomerAvailabilityRead, "View appointment times", "Customer", "View open and closed appointment times."),
         Define(QualificationsRead, "View qualifications", "Qualifications", "View qualification records and stylist qualifications."),
         Define(QualificationsManage, "Manage qualifications", "Qualifications", "Create qualifications and maintain stylist qualifications."),
+        Define(ProductsRead, "View retail products", "Retail", "View the retail product catalogue."),
+        Define(ProductsManage, "Manage retail products", "Retail", "Create and update retail products. This does not track stock."),
+        Define(BillsRead, "View bills", "Billing", "View bills, receipts, and service billing coverage."),
+        Define(BillsManage, "Manage bills", "Billing", "Create, edit, finalize, and void bills."),
+        Define(PaymentsCollect, "Collect payments", "Billing", "Record payments and refunds on finalized bills."),
+        Define(TaxRead, "View tax", "Billing", "View the branch tax rate."),
+        Define(TaxManage, "Manage tax", "Billing", "Set the branch tax rate. No rate is assumed."),
+        Define(RentalsRead, "View rentals", "Rentals", "View rental assets and reservations."),
+        Define(RentalsManage, "Manage rentals", "Rentals", "Create rental assets and reservations."),
+        Define(RentalsIssue, "Issue and return rentals", "Rentals", "Issue and receive rental assets."),
         Define(PlatformManage, "Manage the platform", "Platform", "Create salon businesses and branches. This permission cannot be granted by a role.")
     ];
 
@@ -100,8 +120,9 @@ public static class PermissionCatalog
         All.Where(item => item.Area is not "Customer" and not "Platform").Select(item => item.Code).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
-    /// These codes are assigned only by an explicit role matrix.
-    /// Bootstrap must not copy them onto ADMIN or STAFF.
+    /// These codes are assigned by the role matrix below.
+    /// Existing role rows are not backfilled. The generic STAFF role does not receive them.
+    /// A newly created ADMIN role still receives every staff code except own-appointment progress.
     /// </summary>
     public static IReadOnlySet<string> ExplicitAssignmentCodes { get; } =
         new HashSet<string>(StringComparer.Ordinal)
@@ -111,7 +132,17 @@ public static class PermissionCatalog
             AppointmentsLinesProgress,
             NotificationsBookingsRead,
             NotificationsCancellationsRead,
-            NotificationsConfirmationRead
+            NotificationsConfirmationRead,
+            ProductsRead,
+            ProductsManage,
+            BillsRead,
+            BillsManage,
+            PaymentsCollect,
+            TaxRead,
+            TaxManage,
+            RentalsRead,
+            RentalsManage,
+            RentalsIssue
         };
 
     public static IReadOnlySet<string> NotificationReadCodes { get; } =
@@ -164,7 +195,15 @@ public static class PermissionCatalog
             NotificationsBookingsRead,
             NotificationsCancellationsRead,
             NotificationsConfirmationRead,
-            AppointmentsLinesProgress
+            AppointmentsLinesProgress,
+            ProductsRead,
+            BillsRead,
+            BillsManage,
+            PaymentsCollect,
+            TaxRead,
+            RentalsRead,
+            RentalsManage,
+            RentalsIssue
         };
 
     public static IReadOnlySet<string> SupervisorRoleCodes { get; } =
@@ -172,7 +211,8 @@ public static class PermissionCatalog
         {
             AppointmentsRead,
             SchedulesRead,
-            AppointmentsLinesProgress
+            AppointmentsLinesProgress,
+            BillsRead
         };
 
     /// <summary>

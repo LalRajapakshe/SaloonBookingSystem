@@ -13,16 +13,19 @@ namespace SalonBooking.API.Controllers;
 public class CustomerAppointmentsController : ControllerBase
 {
     private readonly IAppointmentWorkflowService _appointments;
+    private readonly IFeedbackService _feedback;
 
-    public CustomerAppointmentsController(IAppointmentWorkflowService appointments)
+    public CustomerAppointmentsController(IAppointmentWorkflowService appointments, IFeedbackService feedback)
     {
         _appointments = appointments;
+        _feedback = feedback;
     }
 
     [HttpGet("services")]
     [RequiresPermission(PermissionCatalog.CustomerAppointmentsCreate)]
     public async Task<IActionResult> Services(CancellationToken cancellationToken)
     {
+        await _feedback.EnsureCustomerMayContinueAsync(cancellationToken);
         return Ok(await _appointments.ListOwnServicesAsync(cancellationToken));
     }
 
@@ -39,6 +42,7 @@ public class CustomerAppointmentsController : ControllerBase
         CreateOwnAppointmentRequest request,
         CancellationToken cancellationToken)
     {
+        await _feedback.EnsureCustomerMayContinueAsync(cancellationToken);
         return Ok(await _appointments.CreateOwnAppointmentAsync(request, cancellationToken));
     }
 
@@ -46,6 +50,7 @@ public class CustomerAppointmentsController : ControllerBase
     [RequiresPermission(PermissionCatalog.CustomerAppointmentsCreate)]
     public async Task<IActionResult> RequestCancellation(long id, CancellationToken cancellationToken)
     {
+        await _feedback.EnsureCustomerMayContinueAsync(cancellationToken);
         return Ok(await _appointments.RequestOwnCancellationAsync(id, cancellationToken));
     }
 }

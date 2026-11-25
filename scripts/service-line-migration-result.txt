@@ -1,0 +1,14 @@
+target=NAGSERVER/saloonDB
+beforeAppointments=16
+beforeServices=19
+backup=G:\DB_Backup\saloonDB-before-AddServiceLineStatus.bak
+backupVerified=true
+afterAppointments=16
+afterServices=19
+backfillHistory=19
+supervisorLinks=2
+latestMigration=20261123073347_AddServiceLineStatus
+status Assigned=11
+status Cancelled=3
+status Pending=5
+verification=passed

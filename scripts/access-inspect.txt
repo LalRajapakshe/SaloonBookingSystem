@@ -1,0 +1,154 @@
+----- TABLE 0 -----
+ServerName	DbName
+NAGSERVER	saloonDB
+----- TABLE 1 -----
+PermissionCount
+32
+----- TABLE 2 -----
+PermissionCode
+appointments.manage
+appointments.read
+availability.read
+branches.manage
+branches.read
+customer.appointments.create
+customer.appointments.read
+customer.availability.read
+customer.catalogue.read
+customer.profile.read
+customers.manage
+customers.read
+employees.manage
+employees.read
+leaves.manage
+leaves.read
+permissions.read
+platform.manage
+qualifications.manage
+qualifications.read
+roles.manage
+roles.read
+schedules.manage
+schedules.read
+serviceCategories.manage
+serviceCategories.read
+services.manage
+services.read
+tenants.manage
+tenants.read
+users.manage
+users.read
+----- TABLE 3 -----
+TenantId	IsActive	IsDeleted
+1	True	False
+2	True	False
+----- TABLE 4 -----
+TenantId	RoleId	RoleCode	IsActive	IsDeleted	UserLinks
+1	1	ADMIN	True	False	2
+1	3	CUSTOMER	True	False	1
+1	2	STAFF	True	False	0
+2	4	ADMIN	True	False	0
+2	6	CUSTOMER	True	False	0
+2	5	STAFF	True	False	0
+----- TABLE 5 -----
+UserId	TenantId	UserCategory	IsPlatformAdministrator	IsActive	IsDeleted	HasBranch	RoleCode
+3	1	1	False	True	False	0	ADMIN
+----- TABLE 6 -----
+PlatformAdminCount	ActiveUserRows
+1	3
+----- TABLE 7 -----
+TenantId	RoleCode	PermissionCode
+1	ADMIN	appointments.manage
+1	ADMIN	appointments.read
+1	ADMIN	availability.read
+1	ADMIN	branches.manage
+1	ADMIN	branches.read
+1	ADMIN	customers.manage
+1	ADMIN	customers.read
+1	ADMIN	employees.manage
+1	ADMIN	employees.read
+1	ADMIN	leaves.manage
+1	ADMIN	leaves.read
+1	ADMIN	permissions.read
+1	ADMIN	qualifications.manage
+1	ADMIN	qualifications.read
+1	ADMIN	roles.manage
+1	ADMIN	roles.read
+1	ADMIN	schedules.manage
+1	ADMIN	schedules.read
+1	ADMIN	serviceCategories.manage
+1	ADMIN	serviceCategories.read
+1	ADMIN	services.manage
+1	ADMIN	services.read
+1	ADMIN	tenants.manage
+1	ADMIN	tenants.read
+1	ADMIN	users.manage
+1	ADMIN	users.read
+1	CUSTOMER	customer.appointments.create
+1	CUSTOMER	customer.appointments.read
+1	CUSTOMER	customer.availability.read
+1	CUSTOMER	customer.catalogue.read
+1	CUSTOMER	customer.profile.read
+1	STAFF	appointments.manage
+1	STAFF	appointments.read
+1	STAFF	availability.read
+1	STAFF	branches.manage
+1	STAFF	branches.read
+1	STAFF	customers.manage
+1	STAFF	customers.read
+1	STAFF	employees.manage
+1	STAFF	employees.read
+1	STAFF	leaves.manage
+1	STAFF	leaves.read
+1	STAFF	schedules.manage
+1	STAFF	schedules.read
+1	STAFF	serviceCategories.manage
+1	STAFF	serviceCategories.read
+1	STAFF	services.manage
+1	STAFF	services.read
+1	STAFF	tenants.read
+2	ADMIN	appointments.manage
+2	ADMIN	appointments.read
+2	ADMIN	availability.read
+2	ADMIN	branches.manage
+2	ADMIN	branches.read
+2	ADMIN	customers.manage
+2	ADMIN	customers.read
+2	ADMIN	employees.manage
+2	ADMIN	employees.read
+2	ADMIN	leaves.manage
+2	ADMIN	leaves.read
+2	ADMIN	permissions.read
+2	ADMIN	roles.manage
+2	ADMIN	roles.read
+2	ADMIN	schedules.manage
+2	ADMIN	schedules.read
+2	ADMIN	serviceCategories.manage
+2	ADMIN	serviceCategories.read
+2	ADMIN	services.manage
+2	ADMIN	services.read
+2	ADMIN	tenants.manage
+2	ADMIN	tenants.read
+2	ADMIN	users.manage
+2	ADMIN	users.read
+2	CUSTOMER	customer.appointments.create
+2	CUSTOMER	customer.appointments.read
+2	CUSTOMER	customer.profile.read
+2	STAFF	appointments.manage
+2	STAFF	appointments.read
+2	STAFF	availability.read
+2	STAFF	branches.manage
+2	STAFF	branches.read
+2	STAFF	customers.manage
+2	STAFF	customers.read
+2	STAFF	employees.manage
+2	STAFF	employees.read
+2	STAFF	leaves.manage
+2	STAFF	leaves.read
+2	STAFF	schedules.manage
+2	STAFF	schedules.read
+2	STAFF	serviceCategories.manage
+2	STAFF	serviceCategories.read
+2	STAFF	services.manage
+2	STAFF	services.read
+2	STAFF	tenants.read

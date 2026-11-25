@@ -1,0 +1,17 @@
+TenantId=1 RoleCode=ADMIN Links=29
+TenantId=1 RoleCode=CUSTOMER Links=5
+TenantId=1 RoleCode=RECEPTIONIST Links=11
+TenantId=1 RoleCode=STAFF Links=18
+TenantId=1 RoleCode=STYLIST Links=2
+TenantId=1 RoleCode=SUPERVISOR Links=2
+TenantId=2 RoleCode=ADMIN Links=29
+TenantId=2 RoleCode=CUSTOMER Links=5
+TenantId=2 RoleCode=RECEPTIONIST Links=11
+TenantId=2 RoleCode=STAFF Links=18
+TenantId=2 RoleCode=STYLIST Links=2
+TenantId=2 RoleCode=SUPERVISOR Links=2
+---
+DuplicateCodes=0
+---
+AdminForbidden=0
+---

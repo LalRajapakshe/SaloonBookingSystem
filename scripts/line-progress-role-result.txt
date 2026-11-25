@@ -1,0 +1,24 @@
+target=NAGSERVER/saloonDB
+committed
+1 ADMIN appointments.manage
+1 ADMIN appointments.read
+1 ADMIN schedules.read
+1 RECEPTIONIST appointments.lines.progress
+1 RECEPTIONIST appointments.manage
+1 RECEPTIONIST appointments.read
+1 RECEPTIONIST schedules.read
+1 STYLIST appointments.own.read
+1 SUPERVISOR appointments.lines.progress
+1 SUPERVISOR appointments.read
+1 SUPERVISOR schedules.read
+2 ADMIN appointments.manage
+2 ADMIN appointments.read
+2 ADMIN schedules.read
+2 RECEPTIONIST appointments.lines.progress
+2 RECEPTIONIST appointments.manage
+2 RECEPTIONIST appointments.read
+2 RECEPTIONIST schedules.read
+2 STYLIST appointments.own.read
+2 SUPERVISOR appointments.lines.progress
+2 SUPERVISOR appointments.read
+2 SUPERVISOR schedules.read

@@ -43,8 +43,8 @@ public class SilkAccessTests
             return new { codes, roles, links };
         });
 
-        Assert.Equal(38, stored.codes.Count);
-        Assert.Equal(38, stored.codes.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(PermissionCatalog.All.Count, stored.codes.Count);
+        Assert.Equal(PermissionCatalog.All.Count, stored.codes.Distinct(StringComparer.Ordinal).Count());
         foreach (var code in PermissionCatalog.ExplicitAssignmentCodes)
         {
             Assert.Equal(1, stored.codes.Count(item => item == code));
@@ -197,6 +197,8 @@ public class SilkAccessTests
         Assert.DoesNotContain(PermissionCatalog.AppointmentsOwnRead, me.Permissions);
         Assert.Contains(PermissionCatalog.NotificationsBookingsRead, me.Permissions);
         Assert.Contains(PermissionCatalog.UsersManage, me.Permissions);
+        Assert.Contains(PermissionCatalog.BillsManage, me.Permissions);
+        Assert.Contains(PermissionCatalog.ProductsManage, me.Permissions);
 
         var stylistRole = await RoleIdAsync(admin, PermissionCatalog.StylistRoleCode);
         var receptionistRole = await RoleIdAsync(admin, PermissionCatalog.ReceptionistRoleCode);
@@ -226,9 +228,16 @@ public class SilkAccessTests
             "/api/Appointments/1/services/1/progress",
             new { action = "Commence", actualStart = "2000-01-01T00:00:00Z" })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await stylist.PostAsJsonAsync("/api/Appointments/1/status", new { status = "InProgress" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await stylist.GetAsync("/api/Bills")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await stylist.GetAsync("/api/RetailProducts")).StatusCode);
+        Assert.DoesNotContain(PermissionCatalog.BillsRead, stylistMe.Permissions);
 
         using var desk = await _factory.CreateAuthenticatedClientAsync("silk.desk");
         Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync("/api/Appointments")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync("/api/Bills")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync("/api/RetailProducts")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync("/api/TaxSettings")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await desk.PutAsJsonAsync("/api/TaxSettings", new { branchId = _factory.BranchA1Id, name = "VAT", ratePercent = 8 })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync("/api/Customers")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync("/api/Services")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await desk.GetAsync("/api/Branch")).StatusCode);
@@ -249,6 +258,9 @@ public class SilkAccessTests
         Assert.DoesNotContain(PermissionCatalog.AppointmentsManage, supervisorMe.Permissions);
         Assert.DoesNotContain(PermissionCatalog.NotificationsBookingsRead, supervisorMe.Permissions);
         Assert.Equal(HttpStatusCode.OK, (await supervisor.GetAsync("/api/Appointments")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await supervisor.GetAsync("/api/Bills")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.PostAsJsonAsync("/api/Bills", new { customerId = _factory.CustomerA1Id })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.GetAsync("/api/RetailProducts")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await supervisor.GetAsync("/api/StaffSchedules")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.GetAsync("/api/Employees")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.GetAsync("/api/Appointments/notifications")).StatusCode);

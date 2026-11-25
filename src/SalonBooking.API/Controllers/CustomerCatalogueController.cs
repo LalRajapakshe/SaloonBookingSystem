@@ -12,10 +12,12 @@ namespace SalonBooking.API.Controllers;
 public class CustomerCatalogueController : ControllerBase
 {
     private readonly ICustomerCatalogueService _catalogue;
+    private readonly IFeedbackService _feedback;
 
-    public CustomerCatalogueController(ICustomerCatalogueService catalogue)
+    public CustomerCatalogueController(ICustomerCatalogueService catalogue, IFeedbackService feedback)
     {
         _catalogue = catalogue;
+        _feedback = feedback;
     }
 
     [HttpGet("branches")]
@@ -36,6 +38,7 @@ public class CustomerCatalogueController : ControllerBase
     [RequiresPermission(PermissionCatalog.CustomerCatalogueRead)]
     public async Task<IActionResult> Services(long branchId, CancellationToken cancellationToken)
     {
+        await _feedback.EnsureCustomerMayContinueAsync(cancellationToken);
         return Ok(await _catalogue.ListServicesAsync(branchId, cancellationToken));
     }
 
@@ -69,6 +72,7 @@ public class CustomerCatalogueController : ControllerBase
         [FromQuery] long? employeeId,
         CancellationToken cancellationToken)
     {
+        await _feedback.EnsureCustomerMayContinueAsync(cancellationToken);
         return Ok(await _catalogue.GetAvailabilityAsync(branchId, serviceId, date, employeeId, cancellationToken));
     }
 

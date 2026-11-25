@@ -108,10 +108,31 @@ public sealed class DocumentNumberService : IDocumentNumberService
                 .IgnoreQueryFilters()
                 .Where(item => item.TenantId == tenantId)
                 .MaxAsync(item => (long?)item.CustomerId, cancellationToken),
+            DocSeriesKind.Bill => await HighestBillNumberAsync(tenantId, cancellationToken),
             _ => throw new InvalidOperationException($"Unknown document series '{docType}'.")
         };
 
         return highest ?? 0;
+    }
+
+    private async Task<long> HighestBillNumberAsync(long tenantId, CancellationToken cancellationToken)
+    {
+        var numbers = await _context.Bills
+            .IgnoreQueryFilters()
+            .Where(item => item.TenantId == tenantId && item.BillNumber != null)
+            .Select(item => item.BillNumber!)
+            .ToListAsync(cancellationToken);
+        long highest = 0;
+        foreach (var number in numbers)
+        {
+            var digits = new string(number.Where(char.IsDigit).ToArray());
+            if (long.TryParse(digits, out var value) && value > highest)
+            {
+                highest = value;
+            }
+        }
+
+        return highest;
     }
 
     private async Task<string> IncrementAsync(

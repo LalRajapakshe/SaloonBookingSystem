@@ -77,6 +77,10 @@ builder.Services.AddScoped<IEmployeeService, SalonBooking.Infrastructure.Service
 builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
 builder.Services.AddScoped<IServiceService, ServiceService>();
 builder.Services.AddScoped<IAppointmentWorkflowService, AppointmentWorkflowService>();
+builder.Services.AddScoped<IBillingService, BillingService>();
+builder.Services.AddScoped<IRentalService, RentalService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+builder.Services.AddScoped<IOperationsService, OperationsService>();
 builder.Services.AddScoped<IEmployeeCapabilityService, EmployeeCapabilityService>();
 builder.Services.AddScoped<IStaffScheduleService, StaffScheduleService>();
 builder.Services.AddScoped<IStaffLeaveService, StaffLeaveService>();
@@ -135,6 +139,14 @@ builder.Services.AddAuthentication(
                 new AnyPermissionRequirement(
                 [
                     PermissionCatalog.AppointmentsLinesProgress
+                ])));
+        options.AddPolicy(
+            RequiresAnyPermissionAttribute.DashboardPolicy,
+            policy => policy.Requirements.Add(
+                new AnyPermissionRequirement(
+                [
+                    PermissionCatalog.AppointmentsRead,
+                    PermissionCatalog.AppointmentsOwnRead
                 ])));
         options.AddPolicy(
             RequiresAnyPermissionAttribute.LineHistoryPolicy,

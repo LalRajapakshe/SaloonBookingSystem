@@ -1,0 +1,9 @@
+target=NAGSERVER/saloonDB
+2026-11-23 12:46:47 G:\DB_Backup\saloonDB_2026-11-23 12-46-46.bak
+2026-11-20 11:12:11 G:\DB_Backup\saloonDB_2026-11-20 11-12-11.bak
+2026-11-18 12:42:37 G:\DB_Backup\saloonDB_2026-11-18 12-42-37.bak
+2026-11-17 07:14:46 G:\DB_Backup\saloonDB_2026-11-17 07-14-46.bak
+2026-11-12 08:14:28 G:\DB_Backup\saloonDB_2026-11-12 08-14-27.bak
+2026-11-10 11:54:00 G:\DB_Backup\saloonDB_2026-11-10 11-53-59.bak
+2026-11-08 23:27:43 G:\DB_Backup\saloonDB_2026-11-08 23-27-43.bak
+2026-11-06 23:06:21 G:\DB_Backup\saloonDB_2026-11-06 23-06-19.bak

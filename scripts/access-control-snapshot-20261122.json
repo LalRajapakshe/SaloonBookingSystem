@@ -1,0 +1,1030 @@
+﻿{
+    "capturedAt":  "2026-11-22T17:06:48.3222410Z",
+    "server":  "NAGSERVER",
+    "database":  "saloonDB",
+    "permissions":  [
+                        {
+                            "PermissionId":  1,
+                            "PermissionCode":  "users.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  2,
+                            "PermissionCode":  "users.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  3,
+                            "PermissionCode":  "roles.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  4,
+                            "PermissionCode":  "roles.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  5,
+                            "PermissionCode":  "permissions.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  6,
+                            "PermissionCode":  "employees.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  7,
+                            "PermissionCode":  "employees.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  8,
+                            "PermissionCode":  "customers.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  9,
+                            "PermissionCode":  "customers.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  10,
+                            "PermissionCode":  "services.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  11,
+                            "PermissionCode":  "services.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  12,
+                            "PermissionCode":  "serviceCategories.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  13,
+                            "PermissionCode":  "serviceCategories.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  14,
+                            "PermissionCode":  "appointments.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  15,
+                            "PermissionCode":  "appointments.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  16,
+                            "PermissionCode":  "availability.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  17,
+                            "PermissionCode":  "schedules.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  18,
+                            "PermissionCode":  "schedules.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  19,
+                            "PermissionCode":  "leaves.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  20,
+                            "PermissionCode":  "leaves.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  21,
+                            "PermissionCode":  "branches.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  22,
+                            "PermissionCode":  "branches.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  23,
+                            "PermissionCode":  "tenants.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  24,
+                            "PermissionCode":  "tenants.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  25,
+                            "PermissionCode":  "customer.profile.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  26,
+                            "PermissionCode":  "customer.appointments.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  27,
+                            "PermissionCode":  "customer.appointments.create",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  28,
+                            "PermissionCode":  "customer.catalogue.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  29,
+                            "PermissionCode":  "customer.availability.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  30,
+                            "PermissionCode":  "qualifications.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  31,
+                            "PermissionCode":  "qualifications.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  32,
+                            "PermissionCode":  "platform.manage",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  33,
+                            "PermissionCode":  "appointments.own.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  34,
+                            "PermissionCode":  "appointments.own.progress",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  35,
+                            "PermissionCode":  "notifications.bookings.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  36,
+                            "PermissionCode":  "notifications.cancellations.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        },
+                        {
+                            "PermissionId":  37,
+                            "PermissionCode":  "notifications.confirmation.read",
+                            "IsActive":  true,
+                            "IsDeleted":  false
+                        }
+                    ],
+    "roles":  [
+                  {
+                      "RoleId":  1,
+                      "TenantId":  1,
+                      "RoleCode":  "ADMIN",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  2,
+                      "TenantId":  1,
+                      "RoleCode":  "STAFF",
+                      "IsActive":  false,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  3,
+                      "TenantId":  1,
+                      "RoleCode":  "CUSTOMER",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  4,
+                      "TenantId":  2,
+                      "RoleCode":  "ADMIN",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  5,
+                      "TenantId":  2,
+                      "RoleCode":  "STAFF",
+                      "IsActive":  false,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  6,
+                      "TenantId":  2,
+                      "RoleCode":  "CUSTOMER",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  7,
+                      "TenantId":  1,
+                      "RoleCode":  "STYLIST",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  8,
+                      "TenantId":  1,
+                      "RoleCode":  "RECEPTIONIST",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  9,
+                      "TenantId":  1,
+                      "RoleCode":  "SUPERVISOR",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  10,
+                      "TenantId":  2,
+                      "RoleCode":  "STYLIST",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  11,
+                      "TenantId":  2,
+                      "RoleCode":  "RECEPTIONIST",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  },
+                  {
+                      "RoleId":  12,
+                      "TenantId":  2,
+                      "RoleCode":  "SUPERVISOR",
+                      "IsActive":  true,
+                      "IsDeleted":  false
+                  }
+              ],
+    "rolePermissions":  [
+                            {
+                                "RolePermissionId":  1,
+                                "RoleId":  1,
+                                "PermissionId":  1
+                            },
+                            {
+                                "RolePermissionId":  2,
+                                "RoleId":  1,
+                                "PermissionId":  2
+                            },
+                            {
+                                "RolePermissionId":  3,
+                                "RoleId":  1,
+                                "PermissionId":  3
+                            },
+                            {
+                                "RolePermissionId":  4,
+                                "RoleId":  1,
+                                "PermissionId":  4
+                            },
+                            {
+                                "RolePermissionId":  5,
+                                "RoleId":  1,
+                                "PermissionId":  5
+                            },
+                            {
+                                "RolePermissionId":  6,
+                                "RoleId":  1,
+                                "PermissionId":  6
+                            },
+                            {
+                                "RolePermissionId":  7,
+                                "RoleId":  1,
+                                "PermissionId":  7
+                            },
+                            {
+                                "RolePermissionId":  8,
+                                "RoleId":  1,
+                                "PermissionId":  8
+                            },
+                            {
+                                "RolePermissionId":  9,
+                                "RoleId":  1,
+                                "PermissionId":  9
+                            },
+                            {
+                                "RolePermissionId":  10,
+                                "RoleId":  1,
+                                "PermissionId":  10
+                            },
+                            {
+                                "RolePermissionId":  11,
+                                "RoleId":  1,
+                                "PermissionId":  11
+                            },
+                            {
+                                "RolePermissionId":  12,
+                                "RoleId":  1,
+                                "PermissionId":  12
+                            },
+                            {
+                                "RolePermissionId":  13,
+                                "RoleId":  1,
+                                "PermissionId":  13
+                            },
+                            {
+                                "RolePermissionId":  14,
+                                "RoleId":  1,
+                                "PermissionId":  14
+                            },
+                            {
+                                "RolePermissionId":  15,
+                                "RoleId":  1,
+                                "PermissionId":  15
+                            },
+                            {
+                                "RolePermissionId":  16,
+                                "RoleId":  1,
+                                "PermissionId":  16
+                            },
+                            {
+                                "RolePermissionId":  17,
+                                "RoleId":  1,
+                                "PermissionId":  17
+                            },
+                            {
+                                "RolePermissionId":  18,
+                                "RoleId":  1,
+                                "PermissionId":  18
+                            },
+                            {
+                                "RolePermissionId":  19,
+                                "RoleId":  1,
+                                "PermissionId":  19
+                            },
+                            {
+                                "RolePermissionId":  20,
+                                "RoleId":  1,
+                                "PermissionId":  20
+                            },
+                            {
+                                "RolePermissionId":  21,
+                                "RoleId":  1,
+                                "PermissionId":  21
+                            },
+                            {
+                                "RolePermissionId":  22,
+                                "RoleId":  1,
+                                "PermissionId":  22
+                            },
+                            {
+                                "RolePermissionId":  23,
+                                "RoleId":  1,
+                                "PermissionId":  23
+                            },
+                            {
+                                "RolePermissionId":  24,
+                                "RoleId":  1,
+                                "PermissionId":  24
+                            },
+                            {
+                                "RolePermissionId":  25,
+                                "RoleId":  2,
+                                "PermissionId":  6
+                            },
+                            {
+                                "RolePermissionId":  26,
+                                "RoleId":  2,
+                                "PermissionId":  7
+                            },
+                            {
+                                "RolePermissionId":  27,
+                                "RoleId":  2,
+                                "PermissionId":  8
+                            },
+                            {
+                                "RolePermissionId":  28,
+                                "RoleId":  2,
+                                "PermissionId":  9
+                            },
+                            {
+                                "RolePermissionId":  29,
+                                "RoleId":  2,
+                                "PermissionId":  10
+                            },
+                            {
+                                "RolePermissionId":  30,
+                                "RoleId":  2,
+                                "PermissionId":  11
+                            },
+                            {
+                                "RolePermissionId":  31,
+                                "RoleId":  2,
+                                "PermissionId":  12
+                            },
+                            {
+                                "RolePermissionId":  32,
+                                "RoleId":  2,
+                                "PermissionId":  13
+                            },
+                            {
+                                "RolePermissionId":  33,
+                                "RoleId":  2,
+                                "PermissionId":  14
+                            },
+                            {
+                                "RolePermissionId":  34,
+                                "RoleId":  2,
+                                "PermissionId":  15
+                            },
+                            {
+                                "RolePermissionId":  35,
+                                "RoleId":  2,
+                                "PermissionId":  16
+                            },
+                            {
+                                "RolePermissionId":  36,
+                                "RoleId":  2,
+                                "PermissionId":  17
+                            },
+                            {
+                                "RolePermissionId":  37,
+                                "RoleId":  2,
+                                "PermissionId":  18
+                            },
+                            {
+                                "RolePermissionId":  38,
+                                "RoleId":  2,
+                                "PermissionId":  19
+                            },
+                            {
+                                "RolePermissionId":  39,
+                                "RoleId":  2,
+                                "PermissionId":  20
+                            },
+                            {
+                                "RolePermissionId":  40,
+                                "RoleId":  2,
+                                "PermissionId":  21
+                            },
+                            {
+                                "RolePermissionId":  41,
+                                "RoleId":  2,
+                                "PermissionId":  22
+                            },
+                            {
+                                "RolePermissionId":  42,
+                                "RoleId":  2,
+                                "PermissionId":  23
+                            },
+                            {
+                                "RolePermissionId":  43,
+                                "RoleId":  3,
+                                "PermissionId":  25
+                            },
+                            {
+                                "RolePermissionId":  44,
+                                "RoleId":  3,
+                                "PermissionId":  26
+                            },
+                            {
+                                "RolePermissionId":  45,
+                                "RoleId":  3,
+                                "PermissionId":  27
+                            },
+                            {
+                                "RolePermissionId":  46,
+                                "RoleId":  4,
+                                "PermissionId":  1
+                            },
+                            {
+                                "RolePermissionId":  47,
+                                "RoleId":  4,
+                                "PermissionId":  2
+                            },
+                            {
+                                "RolePermissionId":  48,
+                                "RoleId":  4,
+                                "PermissionId":  3
+                            },
+                            {
+                                "RolePermissionId":  49,
+                                "RoleId":  4,
+                                "PermissionId":  4
+                            },
+                            {
+                                "RolePermissionId":  50,
+                                "RoleId":  4,
+                                "PermissionId":  5
+                            },
+                            {
+                                "RolePermissionId":  51,
+                                "RoleId":  4,
+                                "PermissionId":  6
+                            },
+                            {
+                                "RolePermissionId":  52,
+                                "RoleId":  4,
+                                "PermissionId":  7
+                            },
+                            {
+                                "RolePermissionId":  53,
+                                "RoleId":  4,
+                                "PermissionId":  8
+                            },
+                            {
+                                "RolePermissionId":  54,
+                                "RoleId":  4,
+                                "PermissionId":  9
+                            },
+                            {
+                                "RolePermissionId":  55,
+                                "RoleId":  4,
+                                "PermissionId":  10
+                            },
+                            {
+                                "RolePermissionId":  56,
+                                "RoleId":  4,
+                                "PermissionId":  11
+                            },
+                            {
+                                "RolePermissionId":  57,
+                                "RoleId":  4,
+                                "PermissionId":  12
+                            },
+                            {
+                                "RolePermissionId":  58,
+                                "RoleId":  4,
+                                "PermissionId":  13
+                            },
+                            {
+                                "RolePermissionId":  59,
+                                "RoleId":  4,
+                                "PermissionId":  14
+                            },
+                            {
+                                "RolePermissionId":  60,
+                                "RoleId":  4,
+                                "PermissionId":  15
+                            },
+                            {
+                                "RolePermissionId":  61,
+                                "RoleId":  4,
+                                "PermissionId":  16
+                            },
+                            {
+                                "RolePermissionId":  62,
+                                "RoleId":  4,
+                                "PermissionId":  17
+                            },
+                            {
+                                "RolePermissionId":  63,
+                                "RoleId":  4,
+                                "PermissionId":  18
+                            },
+                            {
+                                "RolePermissionId":  64,
+                                "RoleId":  4,
+                                "PermissionId":  19
+                            },
+                            {
+                                "RolePermissionId":  65,
+                                "RoleId":  4,
+                                "PermissionId":  20
+                            },
+                            {
+                                "RolePermissionId":  66,
+                                "RoleId":  4,
+                                "PermissionId":  21
+                            },
+                            {
+                                "RolePermissionId":  67,
+                                "RoleId":  4,
+                                "PermissionId":  22
+                            },
+                            {
+                                "RolePermissionId":  68,
+                                "RoleId":  4,
+                                "PermissionId":  23
+                            },
+                            {
+                                "RolePermissionId":  69,
+                                "RoleId":  4,
+                                "PermissionId":  24
+                            },
+                            {
+                                "RolePermissionId":  70,
+                                "RoleId":  5,
+                                "PermissionId":  6
+                            },
+                            {
+                                "RolePermissionId":  71,
+                                "RoleId":  5,
+                                "PermissionId":  7
+                            },
+                            {
+                                "RolePermissionId":  72,
+                                "RoleId":  5,
+                                "PermissionId":  8
+                            },
+                            {
+                                "RolePermissionId":  73,
+                                "RoleId":  5,
+                                "PermissionId":  9
+                            },
+                            {
+                                "RolePermissionId":  74,
+                                "RoleId":  5,
+                                "PermissionId":  10
+                            },
+                            {
+                                "RolePermissionId":  75,
+                                "RoleId":  5,
+                                "PermissionId":  11
+                            },
+                            {
+                                "RolePermissionId":  76,
+                                "RoleId":  5,
+                                "PermissionId":  12
+                            },
+                            {
+                                "RolePermissionId":  77,
+                                "RoleId":  5,
+                                "PermissionId":  13
+                            },
+                            {
+                                "RolePermissionId":  78,
+                                "RoleId":  5,
+                                "PermissionId":  14
+                            },
+                            {
+                                "RolePermissionId":  79,
+                                "RoleId":  5,
+                                "PermissionId":  15
+                            },
+                            {
+                                "RolePermissionId":  80,
+                                "RoleId":  5,
+                                "PermissionId":  16
+                            },
+                            {
+                                "RolePermissionId":  81,
+                                "RoleId":  5,
+                                "PermissionId":  17
+                            },
+                            {
+                                "RolePermissionId":  82,
+                                "RoleId":  5,
+                                "PermissionId":  18
+                            },
+                            {
+                                "RolePermissionId":  83,
+                                "RoleId":  5,
+                                "PermissionId":  19
+                            },
+                            {
+                                "RolePermissionId":  84,
+                                "RoleId":  5,
+                                "PermissionId":  20
+                            },
+                            {
+                                "RolePermissionId":  85,
+                                "RoleId":  5,
+                                "PermissionId":  21
+                            },
+                            {
+                                "RolePermissionId":  86,
+                                "RoleId":  5,
+                                "PermissionId":  22
+                            },
+                            {
+                                "RolePermissionId":  87,
+                                "RoleId":  5,
+                                "PermissionId":  23
+                            },
+                            {
+                                "RolePermissionId":  88,
+                                "RoleId":  6,
+                                "PermissionId":  25
+                            },
+                            {
+                                "RolePermissionId":  89,
+                                "RoleId":  6,
+                                "PermissionId":  26
+                            },
+                            {
+                                "RolePermissionId":  90,
+                                "RoleId":  6,
+                                "PermissionId":  27
+                            },
+                            {
+                                "RolePermissionId":  91,
+                                "RoleId":  1,
+                                "PermissionId":  30
+                            },
+                            {
+                                "RolePermissionId":  92,
+                                "RoleId":  1,
+                                "PermissionId":  31
+                            },
+                            {
+                                "RolePermissionId":  93,
+                                "RoleId":  3,
+                                "PermissionId":  28
+                            },
+                            {
+                                "RolePermissionId":  94,
+                                "RoleId":  3,
+                                "PermissionId":  29
+                            },
+                            {
+                                "RolePermissionId":  95,
+                                "RoleId":  1,
+                                "PermissionId":  35
+                            },
+                            {
+                                "RolePermissionId":  96,
+                                "RoleId":  1,
+                                "PermissionId":  36
+                            },
+                            {
+                                "RolePermissionId":  97,
+                                "RoleId":  1,
+                                "PermissionId":  37
+                            },
+                            {
+                                "RolePermissionId":  98,
+                                "RoleId":  4,
+                                "PermissionId":  35
+                            },
+                            {
+                                "RolePermissionId":  99,
+                                "RoleId":  4,
+                                "PermissionId":  36
+                            },
+                            {
+                                "RolePermissionId":  100,
+                                "RoleId":  4,
+                                "PermissionId":  37
+                            },
+                            {
+                                "RolePermissionId":  101,
+                                "RoleId":  4,
+                                "PermissionId":  31
+                            },
+                            {
+                                "RolePermissionId":  102,
+                                "RoleId":  4,
+                                "PermissionId":  30
+                            },
+                            {
+                                "RolePermissionId":  103,
+                                "RoleId":  6,
+                                "PermissionId":  29
+                            },
+                            {
+                                "RolePermissionId":  104,
+                                "RoleId":  6,
+                                "PermissionId":  28
+                            },
+                            {
+                                "RolePermissionId":  105,
+                                "RoleId":  7,
+                                "PermissionId":  34
+                            },
+                            {
+                                "RolePermissionId":  106,
+                                "RoleId":  7,
+                                "PermissionId":  33
+                            },
+                            {
+                                "RolePermissionId":  107,
+                                "RoleId":  8,
+                                "PermissionId":  15
+                            },
+                            {
+                                "RolePermissionId":  108,
+                                "RoleId":  8,
+                                "PermissionId":  14
+                            },
+                            {
+                                "RolePermissionId":  109,
+                                "RoleId":  8,
+                                "PermissionId":  16
+                            },
+                            {
+                                "RolePermissionId":  110,
+                                "RoleId":  8,
+                                "PermissionId":  21
+                            },
+                            {
+                                "RolePermissionId":  111,
+                                "RoleId":  8,
+                                "PermissionId":  9
+                            },
+                            {
+                                "RolePermissionId":  112,
+                                "RoleId":  8,
+                                "PermissionId":  8
+                            },
+                            {
+                                "RolePermissionId":  113,
+                                "RoleId":  8,
+                                "PermissionId":  35
+                            },
+                            {
+                                "RolePermissionId":  114,
+                                "RoleId":  8,
+                                "PermissionId":  36
+                            },
+                            {
+                                "RolePermissionId":  115,
+                                "RoleId":  8,
+                                "PermissionId":  37
+                            },
+                            {
+                                "RolePermissionId":  116,
+                                "RoleId":  8,
+                                "PermissionId":  17
+                            },
+                            {
+                                "RolePermissionId":  117,
+                                "RoleId":  8,
+                                "PermissionId":  10
+                            },
+                            {
+                                "RolePermissionId":  118,
+                                "RoleId":  9,
+                                "PermissionId":  14
+                            },
+                            {
+                                "RolePermissionId":  119,
+                                "RoleId":  9,
+                                "PermissionId":  17
+                            },
+                            {
+                                "RolePermissionId":  120,
+                                "RoleId":  10,
+                                "PermissionId":  34
+                            },
+                            {
+                                "RolePermissionId":  121,
+                                "RoleId":  10,
+                                "PermissionId":  33
+                            },
+                            {
+                                "RolePermissionId":  122,
+                                "RoleId":  11,
+                                "PermissionId":  15
+                            },
+                            {
+                                "RolePermissionId":  123,
+                                "RoleId":  11,
+                                "PermissionId":  14
+                            },
+                            {
+                                "RolePermissionId":  124,
+                                "RoleId":  11,
+                                "PermissionId":  16
+                            },
+                            {
+                                "RolePermissionId":  125,
+                                "RoleId":  11,
+                                "PermissionId":  21
+                            },
+                            {
+                                "RolePermissionId":  126,
+                                "RoleId":  11,
+                                "PermissionId":  9
+                            },
+                            {
+                                "RolePermissionId":  127,
+                                "RoleId":  11,
+                                "PermissionId":  8
+                            },
+                            {
+                                "RolePermissionId":  128,
+                                "RoleId":  11,
+                                "PermissionId":  35
+                            },
+                            {
+                                "RolePermissionId":  129,
+                                "RoleId":  11,
+                                "PermissionId":  36
+                            },
+                            {
+                                "RolePermissionId":  130,
+                                "RoleId":  11,
+                                "PermissionId":  37
+                            },
+                            {
+                                "RolePermissionId":  131,
+                                "RoleId":  11,
+                                "PermissionId":  17
+                            },
+                            {
+                                "RolePermissionId":  132,
+                                "RoleId":  11,
+                                "PermissionId":  10
+                            },
+                            {
+                                "RolePermissionId":  133,
+                                "RoleId":  12,
+                                "PermissionId":  14
+                            },
+                            {
+                                "RolePermissionId":  134,
+                                "RoleId":  12,
+                                "PermissionId":  17
+                            }
+                        ],
+    "userRoles":  [
+                      {
+                          "UserRoleId":  1,
+                          "UserId":  1,
+                          "RoleId":  1
+                      },
+                      {
+                          "UserRoleId":  2,
+                          "UserId":  2,
+                          "RoleId":  3
+                      },
+                      {
+                          "UserRoleId":  3,
+                          "UserId":  3,
+                          "RoleId":  1
+                      }
+                  ],
+    "userFlags":  [
+                      {
+                          "UserId":  1,
+                          "IsPlatformAdministrator":  true,
+                          "IsActive":  true,
+                          "IsDeleted":  false,
+                          "UserCategory":  1,
+                          "HasBranch":  1
+                      },
+                      {
+                          "UserId":  2,
+                          "IsPlatformAdministrator":  false,
+                          "IsActive":  true,
+                          "IsDeleted":  false,
+                          "UserCategory":  3,
+                          "HasBranch":  1
+                      },
+                      {
+                          "UserId":  3,
+                          "IsPlatformAdministrator":  false,
+                          "IsActive":  true,
+                          "IsDeleted":  false,
+                          "UserCategory":  1,
+                          "HasBranch":  0
+                      }
+                  ]
+}
